@@ -112,9 +112,6 @@ public class Router extends AbstractHandler {
         }
     }
 
-    private List<Route> routes = new ArrayList<>();
-    private String defaultContentType = MimeTypes.Type.APPLICATION_JSON.asString();
-
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
     public static @interface Path {
@@ -125,6 +122,12 @@ public class Router extends AbstractHandler {
     @Target(ElementType.METHOD)
     public static @interface ContentType {
         String value();
+    }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    public static @interface Filter {
+        String value() default "";
     }
 
     @Retention(RetentionPolicy.RUNTIME)
@@ -210,14 +213,16 @@ public class Router extends AbstractHandler {
     private class Route {
 
         private final String method;
+        private final String spec;
         private final UriTemplatePathSpec path;
         private final Object route;
         private final Method handler;
         private final String contentType;
 
-        private Route(String method, String path, Object route, Method handler) {
+        private Route(String method, String spec, Object route, Method handler) {
             this.method = method;
-            this.path = new UriTemplatePathSpec(path);
+            this.spec = spec;
+            this.path = new UriTemplatePathSpec(spec);
             this.route = route;
             this.handler = handler;
 
@@ -230,6 +235,10 @@ public class Router extends AbstractHandler {
             return method;
         }
 
+        public String getSpec() {
+            return spec;
+        }
+
         public UriTemplatePathSpec getPath() {
             return path;
         }
@@ -240,20 +249,35 @@ public class Router extends AbstractHandler {
         }
     }
 
+    private List<Route> routes = new ArrayList<>();
+    private List<Route> filters = new ArrayList<>();
+    private String defaultContentType = MimeTypes.Type.APPLICATION_JSON.asString();
+
     public void setDefaultContentType(String defaultContentType) {
         this.defaultContentType = defaultContentType;
     }
 
     public void route(Object route) {
         Class<?> type = route.getClass();
+
+        String prefix = "";
+
         Path path = type.getDeclaredAnnotation(Path.class);
-        String prefix = path == null ? "" : path.value();
+        if (path != null) {
+            prefix = path.value();
+        }
 
         Method[] methods = type.getDeclaredMethods();
 
         for (int i = 0; i < methods.length; i++) {
 
             Method method = methods[i];
+
+            Filter filter = method.getDeclaredAnnotation(Filter.class);
+            if (filter != null) {
+                filters.add(new Route("FILTER", prefix + filter.value(), route, method));
+                continue;
+            }
 
             Get get = method.getDeclaredAnnotation(Get.class);
             if (get != null) {
@@ -291,17 +315,29 @@ public class Router extends AbstractHandler {
     public void handle(String target, Request baseRequest, HttpServletRequest request,
             HttpServletResponse response) throws IOException, ServletException {
 
-        request.setCharacterEncoding("UTF-8");
-        response.setCharacterEncoding("UTF-8");
-
         String method = baseRequest.getMethod();
 
         for (Route route : routes) {
             if (route.getMethod().equals(method) && route.getPath().matches(target)) {
-                Map<String, String> params = route.getPath().getPathParams(target);
+
+                request.setCharacterEncoding("UTF-8");
+                response.setCharacterEncoding("UTF-8");
+
+                HttpServerExchange exchange = new HttpServerExchange(target,
+                        route.getPath().getPathParams(target), request, response);
+
                 try {
-                    route.invoke(new HttpServerExchange(target, params, request, response));
+
+                    for (Route filter : filters) {
+                        if (target.startsWith(filter.getSpec())) {
+                            filter.invoke(exchange);
+                        }
+                    }
+
+                    route.invoke(exchange);
+
                     baseRequest.setHandled(true);
+                    break;
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
