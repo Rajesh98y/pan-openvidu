@@ -9,6 +9,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import io.openvidu.java.client.OpenVidu;
+import io.openvidu.java.client.OpenViduHttpException;
+import io.openvidu.java.client.OpenViduJavaClientException;
 import io.openvidu.java.client.Session;
 import pan.Modules.Development;
 import pan.Router.Client;
@@ -42,13 +44,13 @@ public class CallControllerTest {
     }
 
     @Test
-    public void shouldReturnNotFound() throws Exception {
+    public void shouldReturnNotFound() {
         assertEquals(404, client.get("/none").getStatus());
         assertEquals(404, client.get("/call").getStatus());
     }
 
     @Test
-    public void shouldJoinExistingSession() throws Exception {
+    public void shouldJoinExistingSession() {
         CallPayload payload = new CallPayload();
         payload.setSessionId("existing-session");
 
@@ -59,7 +61,11 @@ public class CallControllerTest {
             assertEquals(200, res.getStatus());
         }
 
-        openVidu.fetch();
+        try {
+            openVidu.fetch();
+        } catch (OpenViduJavaClientException | OpenViduHttpException e) {
+            throw new RuntimeException(e);
+        }
 
         int count = 0;
 
@@ -73,7 +79,7 @@ public class CallControllerTest {
     }
 
     @Test
-    public void shouldNotCreateMalformedSession() throws Exception {
+    public void shouldNotCreateMalformedSession() {
         assertNotEquals(200, client.post("/call", "{ essionId: 1 }").getStatus());
         assertNotEquals(200, client.post("/call", "{ error }").getStatus());
         assertNotEquals(200, client.post("/call", "test").getStatus());
@@ -81,7 +87,7 @@ public class CallControllerTest {
     }
 
     @Test
-    public void shouldRemoveDiacriticsFromSessionId() throws Exception {
+    public void shouldRemoveDiacriticsFromSessionId() {
         CallPayload payload = new CallPayload();
         payload.setSessionId("AaĞğŞşİıÖöÇçĞğŞşİıÖöÇç-0123456789-%%");
 
