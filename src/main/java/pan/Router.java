@@ -127,7 +127,7 @@ public class Router extends AbstractHandler {
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.METHOD)
     public static @interface Filter {
-        String value() default "";
+        String value();
     }
 
     @Retention(RetentionPolicy.RUNTIME)
@@ -193,20 +193,20 @@ public class Router extends AbstractHandler {
         }
 
         public String getRequestBody() {
-            StringBuilder builder = new StringBuilder();
-
             try {
+                StringBuilder builder = new StringBuilder();
                 BufferedReader reader = request.getReader();
+
                 String line;
 
                 while ((line = reader.readLine()) != null) {
                     builder.append(line);
                 }
+
+                return builder.toString();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-
-            return builder.toString();
         }
     }
 
@@ -243,12 +243,17 @@ public class Router extends AbstractHandler {
             return path;
         }
 
-        public void invoke(HttpServerExchange exchange) throws Exception {
+        public void invoke(HttpServerExchange exchange) {
             exchange.getResponse().setContentType(contentType);
-            handler.invoke(route, exchange);
+            try {
+                handler.invoke(route, exchange);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
+    private String context = "";
     private List<Route> routes = new ArrayList<>();
     private List<Route> filters = new ArrayList<>();
     private String defaultContentType = MimeTypes.Type.APPLICATION_JSON.asString();
@@ -257,14 +262,18 @@ public class Router extends AbstractHandler {
         this.defaultContentType = defaultContentType;
     }
 
+    public void route(String route) {
+        this.context = route;
+    }
+
     public void route(Object route) {
         Class<?> type = route.getClass();
 
-        String prefix = "";
+        String prefix = context;
 
         Path path = type.getDeclaredAnnotation(Path.class);
         if (path != null) {
-            prefix = path.value();
+            prefix = context + path.value();
         }
 
         Method[] methods = type.getDeclaredMethods();
@@ -272,12 +281,6 @@ public class Router extends AbstractHandler {
         for (int i = 0; i < methods.length; i++) {
 
             Method method = methods[i];
-
-            Filter filter = method.getDeclaredAnnotation(Filter.class);
-            if (filter != null) {
-                filters.add(new Route("FILTER", prefix + filter.value(), route, method));
-                continue;
-            }
 
             Get get = method.getDeclaredAnnotation(Get.class);
             if (get != null) {
@@ -308,6 +311,12 @@ public class Router extends AbstractHandler {
                 routes.add(new Route("OPTIONS", prefix + options.value(), route, method));
                 continue;
             }
+
+            Filter filter = method.getDeclaredAnnotation(Filter.class);
+            if (filter != null) {
+                filters.add(new Route("FILTER", filter.value(), route, method));
+                continue;
+            }
         }
     }
 
@@ -326,21 +335,16 @@ public class Router extends AbstractHandler {
                 HttpServerExchange exchange = new HttpServerExchange(target,
                         route.getPath().getPathParams(target), request, response);
 
-                try {
-
-                    for (Route filter : filters) {
-                        if (target.startsWith(filter.getSpec())) {
-                            filter.invoke(exchange);
-                        }
+                for (Route filter : filters) {
+                    if (target.startsWith(filter.getSpec())) {
+                        filter.invoke(exchange);
                     }
-
-                    route.invoke(exchange);
-
-                    baseRequest.setHandled(true);
-                    break;
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
                 }
+
+                route.invoke(exchange);
+
+                baseRequest.setHandled(true);
+                break;
             }
         }
     }
