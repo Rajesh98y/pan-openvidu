@@ -15,6 +15,7 @@ public class Application {
 
     private Server server;
     private Router router;
+    private LoginController loginController;
     private CallController callController;
 
     @Inject
@@ -28,11 +29,17 @@ public class Application {
     }
 
     @Inject
+    public void setLoginController(LoginController loginController) {
+        this.loginController = loginController;
+    }
+
+    @Inject
     public void setCallController(CallController callController) {
         this.callController = callController;
     }
 
     public void run() {
+        router.route(loginController);
         router.route(callController);
 
         try {
