@@ -47,8 +47,8 @@ public class Modules {
 
     public static class Production extends Common {
 
-        public Production(String openViduPassword) {
-            setOpenViduPassword(openViduPassword);
+        public Production(String[] args) {
+            setOpenViduPassword(args[0]);
         }
     }
 

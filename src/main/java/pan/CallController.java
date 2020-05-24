@@ -12,6 +12,7 @@ import io.openvidu.java.client.TokenOptions;
 import pan.Router.HttpServerExchange;
 import pan.Router.Path;
 import pan.Router.Post;
+import pan.Router.ValidationException;
 
 @Singleton
 @Path("/call")
@@ -45,15 +46,15 @@ public class CallController {
 
     private String normalizeSessionId(String sessionId) {
         if (sessionId == null) {
-            throw new RuntimeException("sessionId is null");
+            throw new ValidationException("sessionId is null");
         }
 
         if (sessionId.length() < 4) {
-            throw new RuntimeException("sessionId is too short");
+            throw new ValidationException("sessionId is too short");
         }
 
         if (sessionId.length() > 50) {
-            throw new RuntimeException("sessionId is too long");
+            throw new ValidationException("sessionId is too long");
         }
 
         return sessionId.replace('ğ', 'g').replace('Ğ', 'G').replace('ü', 'u').replace('Ü', 'U')

@@ -44,6 +44,6 @@ public class Application {
     }
 
     public static void main(String[] args) {
-        Guice.createInjector(new Production(args[0])).getInstance(Application.class).run();
+        Guice.createInjector(new Production(args)).getInstance(Application.class).run();
     }
 }

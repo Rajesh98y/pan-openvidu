@@ -112,6 +112,15 @@ public class Router extends AbstractHandler {
         }
     }
 
+    public static class ValidationException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        public ValidationException(String msg) {
+            super(msg);
+        }
+    }
+
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
     public static @interface Path {
@@ -221,8 +230,8 @@ public class Router extends AbstractHandler {
 
         private Route(String method, String spec, Object route, Method handler) {
             this.method = method;
-            this.spec = spec;
-            this.path = new UriTemplatePathSpec(spec);
+            this.spec = spec.replaceAll("/+", "/");
+            this.path = new UriTemplatePathSpec(this.spec);
             this.route = route;
             this.handler = handler;
 
@@ -269,11 +278,11 @@ public class Router extends AbstractHandler {
     public void route(Object route) {
         Class<?> type = route.getClass();
 
-        String prefix = context;
+        String prefix = this.context;
 
         Path path = type.getDeclaredAnnotation(Path.class);
         if (path != null) {
-            prefix = context + path.value();
+            prefix += path.value();
         }
 
         Method[] methods = type.getDeclaredMethods();
