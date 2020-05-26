@@ -18,19 +18,18 @@ import pan.Router.Post;
 @Path("/login")
 public class LoginController {
 
-    private MustacheFactory mustacheFactory;
+    private Mustache template;
 
     @Inject
-    public void setMustacheFactory(MustacheFactory mustacheFactory) {
-        this.mustacheFactory = mustacheFactory;
+    public void setTemplate(MustacheFactory mustacheFactory) {
+        template = mustacheFactory.compile("login.html");
     }
 
     @Get
     @ContentType("text/html")
     public void login(HttpServerExchange exchange) throws Exception {
-        Mustache mustache = mustacheFactory.compile("login.html");
         HashMap<String, Object> scopes = new HashMap<>();
-        mustache.execute(exchange.getResponse().getWriter(), scopes).flush();
+        template.execute(exchange.getResponse().getWriter(), scopes).flush();
     }
 
     @Post
@@ -42,7 +41,6 @@ public class LoginController {
         String username = req.getParameter("username");
         String password = req.getParameter("password");
 
-        Mustache mustache = mustacheFactory.compile("login.html");
         HashMap<String, Object> scopes = new HashMap<>();
 
         if ("ecmel".equals(username) && "0908".equals(password)) {
@@ -52,6 +50,6 @@ public class LoginController {
             scopes.put("message", "Hatalı kullancı adı veya parola");
         }
 
-        mustache.execute(exchange.getResponse().getWriter(), scopes).flush();
+        template.execute(res.getWriter(), scopes).flush();
     }
 }
