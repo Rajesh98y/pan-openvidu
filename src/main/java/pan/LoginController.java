@@ -42,14 +42,16 @@ public class LoginController {
         String username = req.getParameter("username");
         String password = req.getParameter("password");
 
-        if ("ecmel".equals(username) && "0908".equals(password)) {
-            res.addCookie(new Cookie("ROLE", "MODERATOR"));
-            res.sendRedirect("/");
-        }
-
         Mustache mustache = mustacheFactory.compile("login.html");
         HashMap<String, Object> scopes = new HashMap<>();
-        scopes.put("message", "Hatalı kullancı adı veya parola");
+
+        if ("ecmel".equals(username) && "0908".equals(password)) {
+            res.addCookie(new Cookie("ROLE", "MODERATOR"));
+            scopes.put("message", "Bağlantı başarılı");
+        } else {
+            scopes.put("message", "Hatalı kullancı adı veya parola");
+        }
+
         mustache.execute(exchange.getResponse().getWriter(), scopes).flush();
     }
 }
