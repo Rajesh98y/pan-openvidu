@@ -15,7 +15,7 @@ import pan.Router.Path;
 import pan.Router.Post;
 
 @Singleton
-@Path("/login")
+@Path("/call/login")
 public class LoginController {
 
     private MustacheFactory mustacheFactory;
@@ -27,7 +27,7 @@ public class LoginController {
 
     @Get
     @ContentType("text/html")
-    public void login(HttpServerExchange exchange) throws Exception {
+    public void getLoginPage(HttpServerExchange exchange) throws Exception {
         HashMap<String, Object> scopes = new HashMap<>();
         Mustache mustache = mustacheFactory.compile("login.html");
         mustache.execute(exchange.getResponse().getWriter(), scopes);
@@ -35,7 +35,7 @@ public class LoginController {
 
     @Post
     @ContentType("text/html")
-    public void doLogin(HttpServerExchange exchange) throws Exception {
+    public void login(HttpServerExchange exchange) throws Exception {
         HttpServletRequest req = exchange.getRequest();
         HttpServletResponse res = exchange.getResponse();
 
