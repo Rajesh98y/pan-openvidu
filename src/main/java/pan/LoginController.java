@@ -18,18 +18,19 @@ import pan.Router.Post;
 @Path("/login")
 public class LoginController {
 
-    private Mustache template;
+    private MustacheFactory mustacheFactory;
 
     @Inject
-    public void setTemplate(MustacheFactory mustacheFactory) {
-        template = mustacheFactory.compile("login.html");
+    public void setMustacheFactory(MustacheFactory mustacheFactory) {
+        this.mustacheFactory = mustacheFactory;
     }
 
     @Get
     @ContentType("text/html")
     public void login(HttpServerExchange exchange) throws Exception {
         HashMap<String, Object> scopes = new HashMap<>();
-        template.execute(exchange.getResponse().getWriter(), scopes);
+        Mustache mustache = mustacheFactory.compile("login.html");
+        mustache.execute(exchange.getResponse().getWriter(), scopes);
     }
 
     @Post
@@ -43,15 +44,16 @@ public class LoginController {
 
         HashMap<String, Object> scopes = new HashMap<>();
 
-        if ("ecmel".equals(username) && "0908".equals(password)) {
+        if ("admin".equals(username) && "0000".equals(password)) {
             Cookie cookie = new Cookie("ROLE", "MODERATOR");
-            cookie.setHttpOnly(true);            
+            cookie.setHttpOnly(true);
             res.addCookie(cookie);
             scopes.put("message", "Bağlantı başarılı.");
         } else {
             scopes.put("message", "Hatalı kullancı adı veya parola.");
         }
 
-        template.execute(res.getWriter(), scopes);
+        Mustache mustache = mustacheFactory.compile("login.html");
+        mustache.execute(res.getWriter(), scopes);
     }
 }
