@@ -8,14 +8,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import com.github.mustachejava.Mustache;
 import com.github.mustachejava.MustacheFactory;
-import pan.Router.ContentType;
-import pan.Router.Get;
-import pan.Router.HttpServerExchange;
-import pan.Router.Path;
-import pan.Router.Post;
 
 @Singleton
-@Path("/call/login")
 public class LoginController {
 
     private MustacheFactory mustacheFactory;
@@ -25,26 +19,23 @@ public class LoginController {
         this.mustacheFactory = mustacheFactory;
     }
 
-    @Get
-    @ContentType("text/html")
-    public void getLoginPage(HttpServerExchange exchange) throws Exception {
+    public void doGet(HttpServletRequest req, HttpServletResponse res) throws Exception {
+        res.setContentType("text/html");
+
         HashMap<String, Object> scopes = new HashMap<>();
         Mustache mustache = mustacheFactory.compile("login.html");
-        mustache.execute(exchange.getResponse().getWriter(), scopes);
+        mustache.execute(res.getWriter(), scopes);
     }
 
-    @Post
-    @ContentType("text/html")
-    public void login(HttpServerExchange exchange) throws Exception {
-        HttpServletRequest req = exchange.getRequest();
-        HttpServletResponse res = exchange.getResponse();
+    public void doPost(HttpServletRequest req, HttpServletResponse res) throws Exception {
+        res.setContentType("text/html");
 
         String username = req.getParameter("username");
         String password = req.getParameter("password");
 
         HashMap<String, Object> scopes = new HashMap<>();
 
-        if ("admin".equals(username) && "0000".equals(password)) {
+        if ("admin".equals(username) && "admin".equals(password)) {
             Cookie cookie = new Cookie("ROLE", "MODERATOR");
             cookie.setHttpOnly(true);
             res.addCookie(cookie);

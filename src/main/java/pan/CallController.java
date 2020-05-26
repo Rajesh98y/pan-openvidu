@@ -1,8 +1,12 @@
 package pan;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import com.google.gson.Gson;
 import io.openvidu.java.client.OpenVidu;
 import io.openvidu.java.client.OpenViduRole;
@@ -10,13 +14,9 @@ import io.openvidu.java.client.Session;
 import io.openvidu.java.client.SessionProperties;
 import io.openvidu.java.client.SessionProperties.Builder;
 import io.openvidu.java.client.TokenOptions;
-import pan.Router.HttpServerExchange;
-import pan.Router.Path;
-import pan.Router.Post;
 import pan.Router.ValidationException;
 
 @Singleton
-@Path("/call")
 public class CallController {
 
     private Gson gson;
@@ -32,15 +32,16 @@ public class CallController {
         this.openVidu = openVidu;
     }
 
-    @Post
-    public void getToken(HttpServerExchange exchange) throws Exception {
-        CallPayload payload = gson.fromJson(exchange.getRequestBody(), CallPayload.class);
+    public void doPost(HttpServletRequest req, HttpServletResponse res) throws Exception {
+        res.setContentType("application/json");
+
+        CallPayload payload = gson.fromJson(getRequestBody(req), CallPayload.class);
         String sessionId = normalizeSessionId(payload.getSessionId());
         SessionProperties properties = new Builder().customSessionId(sessionId).build();
 
         OpenViduRole role = OpenViduRole.PUBLISHER;
 
-        Cookie[] cookies = exchange.getRequest().getCookies();
+        Cookie[] cookies = req.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if ("ROLE".equals(cookie.getName())) {
@@ -57,7 +58,7 @@ public class CallController {
         Session session = openVidu.createSession(properties);
         String result = gson.toJson(session.generateToken(opts));
 
-        exchange.getResponse().getWriter().print(result);
+        res.getWriter().print(result);
     }
 
     private String normalizeSessionId(String sessionId) {
@@ -77,5 +78,22 @@ public class CallController {
                 .replace('ş', 's').replace('Ş', 'S').replace('ı', 'i').replace('İ', 'I')
                 .replace('ö', 'o').replace('Ö', 'O').replace('ç', 'c').replace('Ç', 'C')
                 .replaceAll("[^0-9a-zA-Z-]", "_");
+    }
+
+    private String getRequestBody(HttpServletRequest request) {
+        try {
+            StringBuilder builder = new StringBuilder();
+            BufferedReader reader = request.getReader();
+
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
+            }
+
+            return builder.toString();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

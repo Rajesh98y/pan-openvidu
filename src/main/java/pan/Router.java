@@ -1,26 +1,18 @@
 package pan;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import javax.inject.Singleton;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.eclipse.jetty.http.MimeTypes;
 import org.eclipse.jetty.http.pathmap.UriTemplatePathSpec;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
@@ -121,102 +113,10 @@ public class Router extends AbstractHandler {
         }
     }
 
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.TYPE)
-    public static @interface Path {
-        String value() default "";
-    }
+    @FunctionalInterface
+    public static interface RouteHandler {
 
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.METHOD)
-    public static @interface ContentType {
-        String value();
-    }
-
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.METHOD)
-    public static @interface Filter {
-        String value();
-    }
-
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.METHOD)
-    public static @interface Get {
-        String value() default "";
-    }
-
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.METHOD)
-    public static @interface Post {
-        String value() default "";
-    }
-
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.METHOD)
-    public static @interface Put {
-        String value() default "";
-    }
-
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.METHOD)
-    public static @interface Delete {
-        String value() default "";
-    }
-
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.METHOD)
-    public static @interface Options {
-        String value() default "";
-    }
-
-    public static class HttpServerExchange {
-
-        private final String target;
-        private final Map<String, String> params;
-        private final HttpServletRequest request;
-        private final HttpServletResponse response;
-
-        public HttpServerExchange(String target, Map<String, String> params,
-                HttpServletRequest request, HttpServletResponse response) {
-
-            this.target = target;
-            this.params = params;
-            this.request = request;
-            this.response = response;
-        }
-
-        public String getTarget() {
-            return target;
-        }
-
-        public String getPathParam(String key) {
-            return params.get(key);
-        }
-
-        public HttpServletRequest getRequest() {
-            return request;
-        }
-
-        public HttpServletResponse getResponse() {
-            return response;
-        }
-
-        public String getRequestBody() {
-            try {
-                StringBuilder builder = new StringBuilder();
-                BufferedReader reader = request.getReader();
-
-                String line;
-
-                while ((line = reader.readLine()) != null) {
-                    builder.append(line);
-                }
-
-                return builder.toString();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
+        void handle(HttpServletRequest req, HttpServletResponse res) throws Exception;
     }
 
     private class Route {
@@ -224,134 +124,80 @@ public class Router extends AbstractHandler {
         private final String method;
         private final String spec;
         private final UriTemplatePathSpec path;
-        private final Object route;
-        private final Method handler;
-        private final String contentType;
+        private final RouteHandler handler;
 
-        private Route(String method, String spec, Object route, Method handler) {
+        private Route(String method, String spec, RouteHandler handler) {
             this.method = method;
             this.spec = spec.replaceAll("/+", "/");
             this.path = new UriTemplatePathSpec(this.spec);
-            this.route = route;
             this.handler = handler;
-
-            this.contentType = handler.isAnnotationPresent(ContentType.class)
-                    ? handler.getDeclaredAnnotation(ContentType.class).value()
-                    : defaultContentType;
         }
 
-        public String getMethod() {
-            return method;
+        public boolean matches(String target) {
+            return target.startsWith(this.spec);
         }
 
-        public String getSpec() {
-            return spec;
+        public boolean matches(String method, String target) {
+            return this.method.equals(method) && this.path.matches(target);
         }
 
-        public UriTemplatePathSpec getPath() {
-            return path;
+        public void setPathParams(HttpServletRequest req, String target) {
+            path.getPathParams(target).forEach((k, v) -> req.setAttribute(k, v));
         }
 
-        public void invoke(HttpServerExchange exchange) {
-            exchange.getResponse().setContentType(contentType);
+        public void handle(HttpServletRequest req, HttpServletResponse res) {
             try {
-                handler.invoke(route, exchange);
+                handler.handle(req, res);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
     }
 
-    private String context = "";
     private List<Route> routes = new ArrayList<>();
     private List<Route> filters = new ArrayList<>();
-    private String defaultContentType = MimeTypes.Type.APPLICATION_JSON.asString();
 
-    public void setDefaultContentType(String defaultContentType) {
-        this.defaultContentType = defaultContentType;
+    public void get(String route, RouteHandler handler) {
+        routes.add(new Route("GET", route, handler));
     }
 
-    public void route(String route) {
-        this.context = route;
+    public void put(String route, RouteHandler handler) {
+        routes.add(new Route("PUT", route, handler));
     }
 
-    public void route(Object route) {
-        Class<?> type = route.getClass();
+    public void post(String route, RouteHandler handler) {
+        routes.add(new Route("POST", route, handler));
+    }
 
-        String prefix = this.context;
+    public void delete(String route, RouteHandler handler) {
+        routes.add(new Route("DELETE", route, handler));
+    }
 
-        Path path = type.getDeclaredAnnotation(Path.class);
-        if (path != null) {
-            prefix += path.value();
-        }
-
-        Method[] methods = type.getDeclaredMethods();
-
-        for (int i = 0; i < methods.length; i++) {
-
-            Method method = methods[i];
-
-            Get get = method.getDeclaredAnnotation(Get.class);
-            if (get != null) {
-                routes.add(new Route("GET", prefix + get.value(), route, method));
-                continue;
-            }
-
-            Post post = method.getDeclaredAnnotation(Post.class);
-            if (post != null) {
-                routes.add(new Route("POST", prefix + post.value(), route, method));
-                continue;
-            }
-
-            Put put = method.getDeclaredAnnotation(Put.class);
-            if (put != null) {
-                routes.add(new Route("PUT", prefix + put.value(), route, method));
-                continue;
-            }
-
-            Delete delete = method.getDeclaredAnnotation(Delete.class);
-            if (delete != null) {
-                routes.add(new Route("DELETE", prefix + delete.value(), route, method));
-                continue;
-            }
-
-            Options options = method.getDeclaredAnnotation(Options.class);
-            if (options != null) {
-                routes.add(new Route("OPTIONS", prefix + options.value(), route, method));
-                continue;
-            }
-
-            Filter filter = method.getDeclaredAnnotation(Filter.class);
-            if (filter != null) {
-                filters.add(new Route("FILTER", filter.value(), route, method));
-                continue;
-            }
-        }
+    public void filter(String route, RouteHandler handler) {
+        filters.add(new Route("FILTER", route, handler));
     }
 
     @Override
-    public void handle(String target, Request baseRequest, HttpServletRequest request,
-            HttpServletResponse response) throws IOException, ServletException {
+    public void handle(String target, Request baseRequest, HttpServletRequest req,
+            HttpServletResponse res) throws IOException, ServletException {
 
         String method = baseRequest.getMethod();
 
         for (Route route : routes) {
-            if (route.getMethod().equals(method) && route.getPath().matches(target)) {
+            if (route.matches(method, target)) {
 
-                request.setCharacterEncoding("UTF-8");
-                response.setCharacterEncoding("UTF-8");
+                req.setCharacterEncoding("UTF-8");
+                res.setCharacterEncoding("UTF-8");
 
-                HttpServerExchange exchange = new HttpServerExchange(target,
-                        route.getPath().getPathParams(target), request, response);
+                route.setPathParams(req, target);
 
                 for (Route filter : filters) {
-                    if (target.startsWith(filter.getSpec())) {
-                        filter.invoke(exchange);
+                    if (filter.matches(target)) {
+                        filter.handle(req, res);
                     }
                 }
 
-                route.invoke(exchange);
-
+                route.handle(req, res);
                 baseRequest.setHandled(true);
                 break;
             }

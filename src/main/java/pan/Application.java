@@ -39,8 +39,9 @@ public class Application {
     }
 
     public void run() {
-        router.route(loginController);
-        router.route(callController);
+        router.post("/call", callController::doPost);
+        router.post("/call/login", loginController::doPost);
+        router.get("/call/login", loginController::doGet);
 
         try {
             server.start();
