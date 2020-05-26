@@ -29,7 +29,7 @@ public class LoginController {
     @ContentType("text/html")
     public void login(HttpServerExchange exchange) throws Exception {
         HashMap<String, Object> scopes = new HashMap<>();
-        template.execute(exchange.getResponse().getWriter(), scopes).flush();
+        template.execute(exchange.getResponse().getWriter(), scopes);
     }
 
     @Post
@@ -44,12 +44,14 @@ public class LoginController {
         HashMap<String, Object> scopes = new HashMap<>();
 
         if ("ecmel".equals(username) && "0908".equals(password)) {
-            res.addCookie(new Cookie("ROLE", "MODERATOR"));
-            scopes.put("message", "Bağlantı başarılı");
+            Cookie cookie = new Cookie("ROLE", "MODERATOR");
+            cookie.setHttpOnly(true);            
+            res.addCookie(cookie);
+            scopes.put("message", "Bağlantı başarılı.");
         } else {
-            scopes.put("message", "Hatalı kullancı adı veya parola");
+            scopes.put("message", "Hatalı kullancı adı veya parola.");
         }
 
-        template.execute(res.getWriter(), scopes).flush();
+        template.execute(res.getWriter(), scopes);
     }
 }
