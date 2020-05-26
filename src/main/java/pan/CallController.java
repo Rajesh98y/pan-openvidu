@@ -2,6 +2,7 @@ package pan;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import javax.servlet.http.Cookie;
 import com.google.gson.Gson;
 import io.openvidu.java.client.OpenVidu;
 import io.openvidu.java.client.OpenViduRole;
@@ -36,7 +37,22 @@ public class CallController {
         CallPayload payload = gson.fromJson(exchange.getRequestBody(), CallPayload.class);
         String sessionId = normalizeSessionId(payload.getSessionId());
         SessionProperties properties = new Builder().customSessionId(sessionId).build();
-        TokenOptions opts = new TokenOptions.Builder().role(OpenViduRole.PUBLISHER).build();
+
+        OpenViduRole role = OpenViduRole.PUBLISHER;
+
+        Cookie[] cookies = exchange.getRequest().getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("ROLE".equals(cookie.getName())) {
+                    if ("MODERATOR".equals(cookie.getValue())) {
+                        role = OpenViduRole.MODERATOR;
+                    }
+                    break;
+                }
+            }
+        }
+
+        TokenOptions opts = new TokenOptions.Builder().role(role).build();
 
         Session session = openVidu.createSession(properties);
         String result = gson.toJson(session.generateToken(opts));
