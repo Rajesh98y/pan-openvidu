@@ -143,21 +143,6 @@ public class Router extends AbstractHandler
         abstract void handle(HttpServletRequest req, HttpServletResponse res) throws Exception;
     }
 
-    public static String getRequestBody(HttpServletRequest request) throws IOException
-    {
-        StringBuilder builder = new StringBuilder();
-        BufferedReader reader = request.getReader();
-
-        String line;
-
-        while ((line = reader.readLine()) != null)
-        {
-            builder.append(line);
-        }
-
-        return builder.toString();
-    }
-
     private class Route
     {
         private final String method;
@@ -204,6 +189,21 @@ public class Router extends AbstractHandler
     private ArrayDeque<String> context = new ArrayDeque<>();
     private List<Route> routes = new ArrayList<>();
     private List<Route> filters = new ArrayList<>();
+
+    public String getRequestBody(HttpServletRequest request) throws IOException
+    {
+        StringBuilder builder = new StringBuilder();
+        BufferedReader reader = request.getReader();
+
+        String line;
+
+        while ((line = reader.readLine()) != null)
+        {
+            builder.append(line);
+        }
+
+        return builder.toString();
+    }
 
     private String getContext(String route)
     {

@@ -44,7 +44,7 @@ public class CallController implements Controller
     {
         res.setContentType("application/json");
 
-        CallPayload payload = gson.fromJson(Router.getRequestBody(req), CallPayload.class);
+        CallPayload payload = gson.fromJson(router.getRequestBody(req), CallPayload.class);
         String sessionId = normalizeSessionId(payload.getSessionId());
 
         SessionProperties properties = new Builder()
