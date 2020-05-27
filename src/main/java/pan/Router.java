@@ -116,7 +116,7 @@ public class Router extends AbstractHandler {
     @FunctionalInterface
     public static interface RouteHandler {
 
-        void handle(HttpServletRequest req, HttpServletResponse res) throws Exception;
+        abstract void handle(HttpServletRequest req, HttpServletResponse res) throws Exception;
     }
 
     private class Route {
@@ -141,8 +141,8 @@ public class Router extends AbstractHandler {
             return this.method.equals(method) && this.path.matches(target);
         }
 
-        public void setPathParams(HttpServletRequest req, String target) {
-            path.getPathParams(target).forEach((k, v) -> req.setAttribute(k, v));
+        public void setAttributes(HttpServletRequest req, String target) {
+            this.path.getPathParams(target).forEach((k, v) -> req.setAttribute(k, v));
         }
 
         public void handle(HttpServletRequest req, HttpServletResponse res) {
@@ -181,15 +181,13 @@ public class Router extends AbstractHandler {
     public void handle(String target, Request baseRequest, HttpServletRequest req,
             HttpServletResponse res) throws IOException, ServletException {
 
-        String method = baseRequest.getMethod();
-
         for (Route route : routes) {
-            if (route.matches(method, target)) {
+            if (route.matches(baseRequest.getMethod(), target)) {
 
                 req.setCharacterEncoding("UTF-8");
                 res.setCharacterEncoding("UTF-8");
 
-                route.setPathParams(req, target);
+                route.setAttributes(req, target);
 
                 for (Route filter : filters) {
                     if (filter.matches(target)) {
