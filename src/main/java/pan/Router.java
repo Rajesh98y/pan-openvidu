@@ -254,9 +254,11 @@ public class Router extends AbstractHandler
         HttpServletRequest req,
         HttpServletResponse res) throws IOException, ServletException
     {
+        String method = baseRequest.getMethod();
+
         for (Route route : routes)
         {
-            if (route.matches(baseRequest.getMethod(), target))
+            if (route.matches(method, target))
             {
                 req.setCharacterEncoding("UTF-8");
                 res.setCharacterEncoding("UTF-8");
