@@ -46,7 +46,7 @@ public class Application
     {
         router
             .use("/call", () -> router
-                .use("/", callController)
+                .use(callController)
                 .use("/login", loginController));
 
         try

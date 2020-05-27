@@ -168,7 +168,7 @@ public class Router extends AbstractHandler
         private Route(String method, String spec, RouteHandler handler)
         {
             this.method = method;
-            this.spec = spec.replaceAll("/+", "/").replaceAll("/$", "");
+            this.spec = spec.replaceAll("/+", "/");
             this.path = new UriTemplatePathSpec(this.spec);
             this.handler = handler;
         }
@@ -219,6 +219,11 @@ public class Router extends AbstractHandler
         builder.append(route);
 
         return builder.toString();
+    }
+
+    public Router use(Controller controller)
+    {
+        return use("", controller);
     }
 
     public Router use(String route, Controller controller)
