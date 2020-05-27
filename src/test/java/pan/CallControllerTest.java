@@ -35,7 +35,7 @@ public class CallControllerTest
     public void setUp() throws Exception
     {
         Guice.createInjector(new Development()).injectMembers(this);
-        router.post("/call", callController::doPost);
+        router.use("/call", callController);
         server.start();
     }
 

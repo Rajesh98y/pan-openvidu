@@ -7,9 +7,10 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import com.github.mustachejava.MustacheFactory;
+import pan.Router.Controller;
 
 @Singleton
-public class LoginController
+public class LoginController implements Controller
 {
     private MustacheFactory mustacheFactory;
 
@@ -19,7 +20,7 @@ public class LoginController
         this.mustacheFactory = mustacheFactory;
     }
 
-    public void doGet(HttpServletRequest req, HttpServletResponse res) throws Exception
+    public void render(HttpServletRequest req, HttpServletResponse res) throws Exception
     {
         res.setContentType("text/html");
 
@@ -30,7 +31,7 @@ public class LoginController
             .execute(res.getWriter(), scopes);
     }
 
-    public void doPost(HttpServletRequest req, HttpServletResponse res) throws Exception
+    public void login(HttpServletRequest req, HttpServletResponse res) throws Exception
     {
         res.setContentType("text/html");
 
@@ -54,5 +55,13 @@ public class LoginController
         mustacheFactory
             .compile("login.html")
             .execute(res.getWriter(), scopes);
+    }
+
+    @Override
+    public void init(Router router)
+    {
+        router
+            .get(this::render)
+            .post(this::login);
     }
 }

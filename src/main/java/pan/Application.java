@@ -45,11 +45,8 @@ public class Application
     public void run()
     {
         router
-            .route("/call")
-            .post(callController::doPost)
-            .route("/call/login")
-            .post(loginController::doPost)
-            .get(loginController::doGet);
+            .use("/call", callController)
+            .use("/call/login", loginController);
 
         try
         {

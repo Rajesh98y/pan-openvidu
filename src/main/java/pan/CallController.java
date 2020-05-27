@@ -12,10 +12,11 @@ import io.openvidu.java.client.Session;
 import io.openvidu.java.client.SessionProperties;
 import io.openvidu.java.client.SessionProperties.Builder;
 import io.openvidu.java.client.TokenOptions;
+import pan.Router.Controller;
 import pan.Router.ValidationException;
 
 @Singleton
-public class CallController
+public class CallController implements Controller
 {
     private Gson gson;
     private OpenVidu openVidu;
@@ -32,7 +33,7 @@ public class CallController
         this.openVidu = openVidu;
     }
 
-    public void doPost(HttpServletRequest req, HttpServletResponse res) throws Exception
+    public void generateToken(HttpServletRequest req, HttpServletResponse res) throws Exception
     {
         res.setContentType("application/json");
 
@@ -92,5 +93,11 @@ public class CallController
             .replace('ş', 's').replace('Ş', 'S').replace('ı', 'i').replace('İ', 'I')
             .replace('ö', 'o').replace('Ö', 'O').replace('ç', 'c').replace('Ç', 'C')
             .replaceAll("[^0-9a-zA-Z-]", "_");
+    }
+
+    @Override
+    public void init(Router router)
+    {
+        router.post(this::generateToken);
     }
 }

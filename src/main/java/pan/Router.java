@@ -117,11 +117,6 @@ public class Router extends AbstractHandler
         {
             return this.request("DELETE", path, null);
         }
-
-        public Response options(String path, String payload)
-        {
-            return this.request("OPTIONS", path, payload);
-        }
     }
 
     public static class ValidationException extends RuntimeException
@@ -138,6 +133,27 @@ public class Router extends AbstractHandler
     public static interface RouteHandler
     {
         abstract void handle(HttpServletRequest req, HttpServletResponse res) throws Exception;
+    }
+
+    @FunctionalInterface
+    public static interface Controller
+    {
+        abstract void init(Router router);
+    }
+
+    public static String getRequestBody(HttpServletRequest request) throws IOException
+    {
+        StringBuilder builder = new StringBuilder();
+        BufferedReader reader = request.getReader();
+
+        String line;
+
+        while ((line = reader.readLine()) != null)
+        {
+            builder.append(line);
+        }
+
+        return builder.toString();
     }
 
     private class Route
@@ -183,28 +199,16 @@ public class Router extends AbstractHandler
         }
     }
 
-    public static String getRequestBody(HttpServletRequest request) throws IOException
-    {
-        StringBuilder builder = new StringBuilder();
-        BufferedReader reader = request.getReader();
-
-        String line;
-
-        while ((line = reader.readLine()) != null)
-        {
-            builder.append(line);
-        }
-
-        return builder.toString();
-    }
-
     private String context = "/";
     private List<Route> routes = new ArrayList<>();
     private List<Route> filters = new ArrayList<>();
 
-    public Router route(String route)
+    public Router use(String route, Controller controller)
     {
-        this.context = route;
+        String context_ = context;
+        context = route;
+        controller.init(this);
+        context = context_;
         return this;
     }
 
@@ -252,14 +256,9 @@ public class Router extends AbstractHandler
         return this;
     }
 
-    public Router filter(RouteHandler handler)
-    {
-        return filter("", handler);
-    }
-
     public Router filter(String route, RouteHandler handler)
     {
-        filters.add(new Route("FILTER", context.concat(route), handler));
+        filters.add(new Route("FILTER", route, handler));
         return this;
     }
 
