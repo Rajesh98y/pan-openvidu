@@ -1,5 +1,6 @@
 package pan;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -180,6 +181,21 @@ public class Router extends AbstractHandler
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    public static String getRequestBody(HttpServletRequest request) throws IOException
+    {
+        StringBuilder builder = new StringBuilder();
+        BufferedReader reader = request.getReader();
+
+        String line;
+
+        while ((line = reader.readLine()) != null)
+        {
+            builder.append(line);
+        }
+
+        return builder.toString();
     }
 
     private String context = "/";

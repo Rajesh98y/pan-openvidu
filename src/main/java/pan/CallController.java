@@ -1,7 +1,5 @@
 package pan;
 
-import java.io.BufferedReader;
-import java.io.IOException;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.servlet.http.Cookie;
@@ -38,7 +36,7 @@ public class CallController
     {
         res.setContentType("application/json");
 
-        CallPayload payload = gson.fromJson(getRequestBody(req), CallPayload.class);
+        CallPayload payload = gson.fromJson(Router.getRequestBody(req), CallPayload.class);
         String sessionId = normalizeSessionId(payload.getSessionId());
 
         SessionProperties properties = new Builder()
@@ -94,20 +92,5 @@ public class CallController
             .replace('ş', 's').replace('Ş', 'S').replace('ı', 'i').replace('İ', 'I')
             .replace('ö', 'o').replace('Ö', 'O').replace('ç', 'c').replace('Ç', 'C')
             .replaceAll("[^0-9a-zA-Z-]", "_");
-    }
-
-    private String getRequestBody(HttpServletRequest request) throws IOException
-    {
-        StringBuilder builder = new StringBuilder();
-        BufferedReader reader = request.getReader();
-
-        String line;
-
-        while ((line = reader.readLine()) != null)
-        {
-            builder.append(line);
-        }
-
-        return builder.toString();
     }
 }
