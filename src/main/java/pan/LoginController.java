@@ -12,7 +12,14 @@ import pan.Router.Controller;
 @Singleton
 public class LoginController implements Controller
 {
+    private Router router;
     private MustacheFactory mustacheFactory;
+
+    @Inject
+    public void setRouter(Router router)
+    {
+        this.router = router;
+    }
 
     @Inject
     public void setMustacheFactory(MustacheFactory mustacheFactory)
@@ -58,7 +65,7 @@ public class LoginController implements Controller
     }
 
     @Override
-    public void init(Router router)
+    public void init()
     {
         router
             .get(this::render)

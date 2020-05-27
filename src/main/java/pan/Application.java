@@ -45,8 +45,9 @@ public class Application
     public void run()
     {
         router
-            .use("/call", callController)
-            .use("/call/login", loginController);
+            .use("/call", () -> router
+                .use("/", callController)
+                .use("/login", loginController));
 
         try
         {

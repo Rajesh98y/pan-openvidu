@@ -8,7 +8,9 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import javax.inject.Singleton;
 import javax.servlet.ServletException;
@@ -130,15 +132,15 @@ public class Router extends AbstractHandler
     }
 
     @FunctionalInterface
-    public static interface RouteHandler
+    public static interface Controller
     {
-        abstract void handle(HttpServletRequest req, HttpServletResponse res) throws Exception;
+        abstract void init();
     }
 
     @FunctionalInterface
-    public static interface Controller
+    public static interface RouteHandler
     {
-        abstract void init(Router router);
+        abstract void handle(HttpServletRequest req, HttpServletResponse res) throws Exception;
     }
 
     public static String getRequestBody(HttpServletRequest request) throws IOException
@@ -166,7 +168,7 @@ public class Router extends AbstractHandler
         private Route(String method, String spec, RouteHandler handler)
         {
             this.method = method;
-            this.spec = spec.replaceAll("/+", "/");
+            this.spec = spec.replaceAll("/+", "/").replaceAll("/$", "");
             this.path = new UriTemplatePathSpec(this.spec);
             this.handler = handler;
         }
@@ -199,16 +201,31 @@ public class Router extends AbstractHandler
         }
     }
 
-    private String context = "/";
+    private ArrayDeque<String> context = new ArrayDeque<>();
     private List<Route> routes = new ArrayList<>();
     private List<Route> filters = new ArrayList<>();
 
+    private String getContext(String route)
+    {
+        StringBuilder builder = new StringBuilder();
+
+        Iterator<String> it = context.descendingIterator();
+
+        while (it.hasNext())
+        {
+            builder.append(it.next());
+        }
+
+        builder.append(route);
+
+        return builder.toString();
+    }
+
     public Router use(String route, Controller controller)
     {
-        String context_ = context;
-        context = route;
-        controller.init(this);
-        context = context_;
+        context.push(route);
+        controller.init();
+        context.pop();
         return this;
     }
 
@@ -219,7 +236,7 @@ public class Router extends AbstractHandler
 
     public Router get(String route, RouteHandler handler)
     {
-        routes.add(new Route("GET", context.concat(route), handler));
+        routes.add(new Route("GET", getContext(route), handler));
         return this;
     }
 
@@ -230,7 +247,7 @@ public class Router extends AbstractHandler
 
     public Router put(String route, RouteHandler handler)
     {
-        routes.add(new Route("PUT", context.concat(route), handler));
+        routes.add(new Route("PUT", getContext(route), handler));
         return this;
     }
 
@@ -241,7 +258,7 @@ public class Router extends AbstractHandler
 
     public Router post(String route, RouteHandler handler)
     {
-        routes.add(new Route("POST", context.concat(route), handler));
+        routes.add(new Route("POST", getContext(route), handler));
         return this;
     }
 
@@ -252,13 +269,18 @@ public class Router extends AbstractHandler
 
     public Router delete(String route, RouteHandler handler)
     {
-        routes.add(new Route("DELETE", context.concat(route), handler));
+        routes.add(new Route("DELETE", getContext(route), handler));
         return this;
+    }
+
+    public Router filter(RouteHandler handler)
+    {
+        return filter("", handler);
     }
 
     public Router filter(String route, RouteHandler handler)
     {
-        filters.add(new Route("FILTER", route, handler));
+        filters.add(new Route("FILTER", getContext(route), handler));
         return this;
     }
 

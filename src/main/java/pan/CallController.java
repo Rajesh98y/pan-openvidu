@@ -18,8 +18,15 @@ import pan.Router.ValidationException;
 @Singleton
 public class CallController implements Controller
 {
+    private Router router;
     private Gson gson;
     private OpenVidu openVidu;
+
+    @Inject
+    public void setRouter(Router router)
+    {
+        this.router = router;
+    }
 
     @Inject
     public void setGson(Gson gson)
@@ -96,7 +103,7 @@ public class CallController implements Controller
     }
 
     @Override
-    public void init(Router router)
+    public void init()
     {
         router.post(this::generateToken);
     }
