@@ -1,14 +1,16 @@
 package pan;
 
-public class CallPayload {
-
+public class CallPayload
+{
     private String sessionId;
 
-    public String getSessionId() {
+    public String getSessionId()
+    {
         return sessionId;
     }
 
-    public void setSessionId(String sessionId) {
+    public void setSessionId(String sessionId)
+    {
         this.sessionId = sessionId;
     }
 }

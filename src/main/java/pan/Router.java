@@ -18,32 +18,37 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
 @Singleton
-public class Router extends AbstractHandler {
-
-    public static class Client {
-
-        public class Response {
-
+public class Router extends AbstractHandler
+{
+    public static class Client
+    {
+        public class Response
+        {
             private final int status;
             private final String body;
 
-            private Response(int status, String body) {
+            private Response(int status, String body)
+            {
                 this.status = status;
                 this.body = body;
             }
 
-            public int getStatus() {
+            public int getStatus()
+            {
                 return status;
             }
 
-            public String getBody() {
+            public String getBody()
+            {
                 return body;
             }
         }
 
-        private Response request(String method, String path, String payload) {
+        private Response request(String method, String path, String payload)
+        {
             HttpURLConnection con = null;
-            try {
+            try
+            {
                 URL url = new URL("http", "localhost", 8080, path);
 
                 con = (HttpURLConnection) url.openConnection();
@@ -52,8 +57,10 @@ public class Router extends AbstractHandler {
                 con.setDoOutput(true);
                 con.connect();
 
-                if (payload != null) {
-                    try (OutputStream out = con.getOutputStream()) {
+                if (payload != null)
+                {
+                    try (OutputStream out = con.getOutputStream())
+                    {
                         out.write(payload.getBytes(Charset.forName("UTF-8")));
                         out.flush();
                     }
@@ -62,135 +69,204 @@ public class Router extends AbstractHandler {
                 int status = con.getResponseCode();
 
                 try (InputStream is = status > 299 ? con.getErrorStream() : con.getInputStream();
-                        ByteArrayOutputStream os = new ByteArrayOutputStream();) {
+                    ByteArrayOutputStream os = new ByteArrayOutputStream();)
+                {
 
                     byte[] buffer = new byte[1024];
                     int length;
 
-                    while ((length = is.read(buffer)) != -1) {
+                    while ((length = is.read(buffer)) != -1)
+                    {
                         os.write(buffer, 0, length);
                     }
                     os.flush();
 
                     return new Response(status, os.toString("UTF-8"));
                 }
-            } catch (IOException e) {
+            }
+            catch (IOException e)
+            {
                 throw new RuntimeException(e);
-            } finally {
-                if (con != null) {
+            }
+            finally
+            {
+                if (con != null)
+                {
                     con.disconnect();
                 }
             }
         }
 
-        public Response get(String path) {
+        public Response get(String path)
+        {
             return this.request("GET", path, null);
         }
 
-        public Response post(String path, String payload) {
+        public Response post(String path, String payload)
+        {
             return this.request("POST", path, payload);
         }
 
-        public Response put(String path, String payload) {
+        public Response put(String path, String payload)
+        {
             return this.request("PUT", path, payload);
         }
 
-        public Response delete(String path) {
+        public Response delete(String path)
+        {
             return this.request("DELETE", path, null);
         }
 
-        public Response options(String path, String payload) {
+        public Response options(String path, String payload)
+        {
             return this.request("OPTIONS", path, payload);
         }
     }
 
-    public static class ValidationException extends RuntimeException {
-
+    public static class ValidationException extends RuntimeException
+    {
         private static final long serialVersionUID = 1L;
 
-        public ValidationException(String msg) {
+        public ValidationException(String msg)
+        {
             super(msg);
         }
     }
 
     @FunctionalInterface
-    public static interface RouteHandler {
-
+    public static interface RouteHandler
+    {
         abstract void handle(HttpServletRequest req, HttpServletResponse res) throws Exception;
     }
 
-    private class Route {
-
+    private class Route
+    {
         private final String method;
         private final String spec;
         private final UriTemplatePathSpec path;
         private final RouteHandler handler;
 
-        private Route(String method, String spec, RouteHandler handler) {
+        private Route(String method, String spec, RouteHandler handler)
+        {
             this.method = method;
             this.spec = spec.replaceAll("/+", "/");
             this.path = new UriTemplatePathSpec(this.spec);
             this.handler = handler;
         }
 
-        public boolean matches(String target) {
+        public boolean matches(String target)
+        {
             return target.startsWith(this.spec);
         }
 
-        public boolean matches(String method, String target) {
+        public boolean matches(String method, String target)
+        {
             return this.method.equals(method) && this.path.matches(target);
         }
 
-        public void setAttributes(HttpServletRequest req, String target) {
+        public void setAttributes(HttpServletRequest req, String target)
+        {
             this.path.getPathParams(target).forEach((k, v) -> req.setAttribute(k, v));
         }
 
-        public void handle(HttpServletRequest req, HttpServletResponse res) {
-            try {
+        public void handle(HttpServletRequest req, HttpServletResponse res)
+        {
+            try
+            {
                 handler.handle(req, res);
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 throw new RuntimeException(e);
             }
         }
     }
 
+    private String context = "/";
     private List<Route> routes = new ArrayList<>();
     private List<Route> filters = new ArrayList<>();
 
-    public void get(String route, RouteHandler handler) {
-        routes.add(new Route("GET", route, handler));
+    public Router route(String route)
+    {
+        this.context = route;
+        return this;
     }
 
-    public void put(String route, RouteHandler handler) {
-        routes.add(new Route("PUT", route, handler));
+    public Router get(RouteHandler handler)
+    {
+        return get("", handler);
     }
 
-    public void post(String route, RouteHandler handler) {
-        routes.add(new Route("POST", route, handler));
+    public Router get(String route, RouteHandler handler)
+    {
+        routes.add(new Route("GET", context.concat(route), handler));
+        return this;
     }
 
-    public void delete(String route, RouteHandler handler) {
-        routes.add(new Route("DELETE", route, handler));
+    public Router put(RouteHandler handler)
+    {
+        return put("", handler);
     }
 
-    public void filter(String route, RouteHandler handler) {
-        filters.add(new Route("FILTER", route, handler));
+    public Router put(String route, RouteHandler handler)
+    {
+        routes.add(new Route("PUT", context.concat(route), handler));
+        return this;
+    }
+
+    public Router post(RouteHandler handler)
+    {
+        return post("", handler);
+    }
+
+    public Router post(String route, RouteHandler handler)
+    {
+        routes.add(new Route("POST", context.concat(route), handler));
+        return this;
+    }
+
+    public Router delete(RouteHandler handler)
+    {
+        return delete("", handler);
+    }
+
+    public Router delete(String route, RouteHandler handler)
+    {
+        routes.add(new Route("DELETE", context.concat(route), handler));
+        return this;
+    }
+
+    public Router filter(RouteHandler handler)
+    {
+        return filter("", handler);
+    }
+
+    public Router filter(String route, RouteHandler handler)
+    {
+        filters.add(new Route("FILTER", context.concat(route), handler));
+        return this;
     }
 
     @Override
-    public void handle(String target, Request baseRequest, HttpServletRequest req,
-            HttpServletResponse res) throws IOException, ServletException {
-
-        for (Route route : routes) {
-            if (route.matches(baseRequest.getMethod(), target)) {
-
+    public void handle(
+        String target,
+        Request baseRequest,
+        HttpServletRequest req,
+        HttpServletResponse res) throws IOException, ServletException
+    {
+        for (Route route : routes)
+        {
+            if (route.matches(baseRequest.getMethod(), target))
+            {
                 req.setCharacterEncoding("UTF-8");
                 res.setCharacterEncoding("UTF-8");
 
                 route.setAttributes(req, target);
 
-                for (Route filter : filters) {
-                    if (filter.matches(target)) {
+                for (Route filter : filters)
+                {
+                    if (filter.matches(target))
+                    {
                         filter.handle(req, res);
                     }
                 }

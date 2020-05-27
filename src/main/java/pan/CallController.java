@@ -17,35 +17,45 @@ import io.openvidu.java.client.TokenOptions;
 import pan.Router.ValidationException;
 
 @Singleton
-public class CallController {
-
+public class CallController
+{
     private Gson gson;
     private OpenVidu openVidu;
 
     @Inject
-    public void setGson(Gson gson) {
+    public void setGson(Gson gson)
+    {
         this.gson = gson;
     }
 
     @Inject
-    public void setOpenVidu(OpenVidu openVidu) {
+    public void setOpenVidu(OpenVidu openVidu)
+    {
         this.openVidu = openVidu;
     }
 
-    public void doPost(HttpServletRequest req, HttpServletResponse res) throws Exception {
+    public void doPost(HttpServletRequest req, HttpServletResponse res) throws Exception
+    {
         res.setContentType("application/json");
 
         CallPayload payload = gson.fromJson(getRequestBody(req), CallPayload.class);
         String sessionId = normalizeSessionId(payload.getSessionId());
-        SessionProperties properties = new Builder().customSessionId(sessionId).build();
+
+        SessionProperties properties = new Builder()
+            .customSessionId(sessionId)
+            .build();
 
         OpenViduRole role = OpenViduRole.PUBLISHER;
 
         Cookie[] cookies = req.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if ("ROLE".equals(cookie.getName())) {
-                    if ("MODERATOR".equals(cookie.getValue())) {
+        if (cookies != null)
+        {
+            for (Cookie cookie : cookies)
+            {
+                if ("ROLE".equals(cookie.getName()))
+                {
+                    if ("MODERATOR".equals(cookie.getValue()))
+                    {
                         role = OpenViduRole.MODERATOR;
                     }
                     break;
@@ -53,7 +63,9 @@ public class CallController {
             }
         }
 
-        TokenOptions opts = new TokenOptions.Builder().role(role).build();
+        TokenOptions opts = new TokenOptions.Builder()
+            .role(role)
+            .build();
 
         Session session = openVidu.createSession(properties);
         String result = gson.toJson(session.generateToken(opts));
@@ -61,39 +73,41 @@ public class CallController {
         res.getWriter().print(result);
     }
 
-    private String normalizeSessionId(String sessionId) {
-        if (sessionId == null) {
+    private String normalizeSessionId(String sessionId)
+    {
+        if (sessionId == null)
+        {
             throw new ValidationException("sessionId is null");
         }
 
-        if (sessionId.length() < 4) {
+        if (sessionId.length() < 4)
+        {
             throw new ValidationException("sessionId is too short");
         }
 
-        if (sessionId.length() > 50) {
+        if (sessionId.length() > 50)
+        {
             throw new ValidationException("sessionId is too long");
         }
 
         return sessionId.replace('ğ', 'g').replace('Ğ', 'G').replace('ü', 'u').replace('Ü', 'U')
-                .replace('ş', 's').replace('Ş', 'S').replace('ı', 'i').replace('İ', 'I')
-                .replace('ö', 'o').replace('Ö', 'O').replace('ç', 'c').replace('Ç', 'C')
-                .replaceAll("[^0-9a-zA-Z-]", "_");
+            .replace('ş', 's').replace('Ş', 'S').replace('ı', 'i').replace('İ', 'I')
+            .replace('ö', 'o').replace('Ö', 'O').replace('ç', 'c').replace('Ç', 'C')
+            .replaceAll("[^0-9a-zA-Z-]", "_");
     }
 
-    private String getRequestBody(HttpServletRequest request) {
-        try {
-            StringBuilder builder = new StringBuilder();
-            BufferedReader reader = request.getReader();
+    private String getRequestBody(HttpServletRequest request) throws IOException
+    {
+        StringBuilder builder = new StringBuilder();
+        BufferedReader reader = request.getReader();
 
-            String line;
+        String line;
 
-            while ((line = reader.readLine()) != null) {
-                builder.append(line);
-            }
-
-            return builder.toString();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        while ((line = reader.readLine()) != null)
+        {
+            builder.append(line);
         }
+
+        return builder.toString();
     }
 }

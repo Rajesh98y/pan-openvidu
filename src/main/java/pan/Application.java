@@ -9,8 +9,8 @@ import org.slf4j.LoggerFactory;
 import pan.Modules.Production;
 
 @Singleton
-public class Application {
-
+public class Application
+{
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
     private Server server;
@@ -19,39 +19,51 @@ public class Application {
     private CallController callController;
 
     @Inject
-    public void setServer(Server server) {
+    public void setServer(Server server)
+    {
         this.server = server;
     }
 
     @Inject
-    public void setRouter(Router router) {
+    public void setRouter(Router router)
+    {
         this.router = router;
     }
 
     @Inject
-    public void setLoginController(LoginController loginController) {
+    public void setLoginController(LoginController loginController)
+    {
         this.loginController = loginController;
     }
 
     @Inject
-    public void setCallController(CallController callController) {
+    public void setCallController(CallController callController)
+    {
         this.callController = callController;
     }
 
-    public void run() {
-        router.post("/call", callController::doPost);
-        router.post("/call/login", loginController::doPost);
-        router.get("/call/login", loginController::doGet);
+    public void run()
+    {
+        router
+            .route("/call")
+            .post(callController::doPost)
+            .route("/call/login")
+            .post(loginController::doPost)
+            .get(loginController::doGet);
 
-        try {
+        try
+        {
             server.start();
             server.join();
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             LOG.error(e.getMessage(), e);
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args)
+    {
         Guice.createInjector(new Production(args)).getInstance(Application.class).run();
     }
 }

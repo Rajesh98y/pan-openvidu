@@ -6,28 +6,32 @@ import javax.inject.Singleton;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import com.github.mustachejava.Mustache;
 import com.github.mustachejava.MustacheFactory;
 
 @Singleton
-public class LoginController {
-
+public class LoginController
+{
     private MustacheFactory mustacheFactory;
 
     @Inject
-    public void setMustacheFactory(MustacheFactory mustacheFactory) {
+    public void setMustacheFactory(MustacheFactory mustacheFactory)
+    {
         this.mustacheFactory = mustacheFactory;
     }
 
-    public void doGet(HttpServletRequest req, HttpServletResponse res) throws Exception {
+    public void doGet(HttpServletRequest req, HttpServletResponse res) throws Exception
+    {
         res.setContentType("text/html");
 
         HashMap<String, Object> scopes = new HashMap<>();
-        Mustache mustache = mustacheFactory.compile("login.html");
-        mustache.execute(res.getWriter(), scopes);
+
+        mustacheFactory
+            .compile("login.html")
+            .execute(res.getWriter(), scopes);
     }
 
-    public void doPost(HttpServletRequest req, HttpServletResponse res) throws Exception {
+    public void doPost(HttpServletRequest req, HttpServletResponse res) throws Exception
+    {
         res.setContentType("text/html");
 
         String username = req.getParameter("username");
@@ -35,16 +39,20 @@ public class LoginController {
 
         HashMap<String, Object> scopes = new HashMap<>();
 
-        if ("admin".equals(username) && "admin".equals(password)) {
+        if ("admin".equals(username) && "admin".equals(password))
+        {
             Cookie cookie = new Cookie("ROLE", "MODERATOR");
             cookie.setHttpOnly(true);
             res.addCookie(cookie);
             scopes.put("message", "Bağlantı başarılı.");
-        } else {
+        }
+        else
+        {
             scopes.put("message", "Hatalı kullancı adı veya parola.");
         }
 
-        Mustache mustache = mustacheFactory.compile("login.html");
-        mustache.execute(res.getWriter(), scopes);
+        mustacheFactory
+            .compile("login.html")
+            .execute(res.getWriter(), scopes);
     }
 }

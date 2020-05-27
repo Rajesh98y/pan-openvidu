@@ -16,8 +16,8 @@ import pan.Modules.Development;
 import pan.Router.Client;
 import pan.Router.Client.Response;
 
-public class CallControllerTest {
-
+public class CallControllerTest
+{
     @Inject
     private Gson gson;
     @Inject
@@ -32,45 +32,55 @@ public class CallControllerTest {
     private CallController callController;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() throws Exception
+    {
         Guice.createInjector(new Development()).injectMembers(this);
         router.post("/call", callController::doPost);
         server.start();
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() throws Exception
+    {
         server.stop();
     }
 
     @Test
-    public void shouldReturnNotFound() {
+    public void shouldReturnNotFound()
+    {
         assertEquals(404, client.get("/none").getStatus());
         assertEquals(404, client.get("/call").getStatus());
     }
 
     @Test
-    public void shouldJoinExistingSession() {
+    public void shouldJoinExistingSession()
+    {
         CallPayload payload = new CallPayload();
         payload.setSessionId("existing-session");
 
         Response res;
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; i++)
+        {
             res = client.post("/call", gson.toJson(payload));
             assertEquals(200, res.getStatus());
         }
 
-        try {
+        try
+        {
             openVidu.fetch();
-        } catch (OpenViduJavaClientException | OpenViduHttpException e) {
+        }
+        catch (OpenViduJavaClientException | OpenViduHttpException e)
+        {
             throw new RuntimeException(e);
         }
 
         int count = 0;
 
-        for (Session session : openVidu.getActiveSessions()) {
-            if (payload.getSessionId().equals(session.getSessionId())) {
+        for (Session session : openVidu.getActiveSessions())
+        {
+            if (payload.getSessionId().equals(session.getSessionId()))
+            {
                 count++;
             }
         }
@@ -79,7 +89,8 @@ public class CallControllerTest {
     }
 
     @Test
-    public void shouldNotCreateMalformedSession() {
+    public void shouldNotCreateMalformedSession()
+    {
         assertNotEquals(200, client.post("/call", "{ essionId: 1 }").getStatus());
         assertNotEquals(200, client.post("/call", "{ error }").getStatus());
         assertNotEquals(200, client.post("/call", "test").getStatus());
@@ -87,7 +98,8 @@ public class CallControllerTest {
     }
 
     @Test
-    public void shouldRemoveDiacriticsFromSessionId() {
+    public void shouldRemoveDiacriticsFromSessionId()
+    {
         CallPayload payload = new CallPayload();
         payload.setSessionId("AaĞğŞşİıÖöÇçĞğŞşİıÖöÇç-0123456789-%%");
 
