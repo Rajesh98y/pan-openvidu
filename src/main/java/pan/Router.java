@@ -204,7 +204,7 @@ public class Router extends AbstractHandler
             this.path = new UriTemplatePathSpec(this.spec);
             this.handler = handler;
 
-            LOG.info("{}\t{}", this.method, this.spec);
+            LOG.info("{} {}", this.method, this.spec);
         }
 
         public boolean matches(String target)
