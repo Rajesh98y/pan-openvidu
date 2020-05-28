@@ -194,7 +194,7 @@ public class Router extends AbstractHandler
 
     private ArrayDeque<String> context = new ArrayDeque<>();
     private List<Route> routes = new ArrayList<>();
-    private List<Route> filters = new ArrayList<>();
+    private List<Route> befores = new ArrayList<>();
 
     public String getRequestBody(HttpServletRequest request) throws IOException
     {
@@ -284,14 +284,14 @@ public class Router extends AbstractHandler
         return this;
     }
 
-    public Router filter(RouteHandler handler)
+    public Router before(RouteHandler handler)
     {
-        return filter("", handler);
+        return before("", handler);
     }
 
-    public Router filter(String route, RouteHandler handler)
+    public Router before(String route, RouteHandler handler)
     {
-        filters.add(new Route("FILTER", getContext(route), handler));
+        befores.add(new Route("BEFORE", getContext(route), handler));
         return this;
     }
 
@@ -313,11 +313,11 @@ public class Router extends AbstractHandler
 
                 route.setAttributes(req, target);
 
-                for (Route filter : filters)
+                for (Route before : befores)
                 {
-                    if (filter.matches(target))
+                    if (before.matches(target))
                     {
-                        filter.handle(req, res);
+                        before.handle(req, res);
                     }
                 }
 
