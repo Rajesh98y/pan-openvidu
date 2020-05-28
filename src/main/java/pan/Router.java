@@ -19,6 +19,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.http.pathmap.UriTemplatePathSpec;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Singleton
 public class Router extends AbstractHandler
@@ -156,6 +158,8 @@ public class Router extends AbstractHandler
             this.spec = spec.replaceAll("/+", "/");
             this.path = new UriTemplatePathSpec(this.spec);
             this.handler = handler;
+
+            LOG.info("{} {}", this.method, this.spec);
         }
 
         public boolean matches(String target)
@@ -185,6 +189,8 @@ public class Router extends AbstractHandler
             }
         }
     }
+
+    private static final Logger LOG = LoggerFactory.getLogger(Router.class);
 
     private ArrayDeque<String> context = new ArrayDeque<>();
     private List<Route> routes = new ArrayList<>();
@@ -317,8 +323,10 @@ public class Router extends AbstractHandler
 
                 route.handle(req, res);
                 baseRequest.setHandled(true);
-                break;
+                return;
             }
         }
+
+        LOG.warn("Not found: {} {} {}", method, target, req.getRemoteAddr());
     }
 }
