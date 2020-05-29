@@ -259,9 +259,6 @@ public class Router extends HandlerList
         {
             if (route.matches(baseRequest.getMethod(), target))
             {
-                req.setCharacterEncoding("UTF-8");
-                res.setCharacterEncoding("UTF-8");
-
                 route.setAttributes(req, target);
 
                 for (Route before : befores)
