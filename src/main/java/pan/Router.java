@@ -1,159 +1,29 @@
 package pan;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import javax.annotation.Nullable;
 import javax.inject.Singleton;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.http.pathmap.UriTemplatePathSpec;
 import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.websocket.server.WebSocketHandler;
+import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
+import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse;
+import org.eclipse.jetty.websocket.servlet.WebSocketCreator;
+import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Singleton
-public class Router extends AbstractHandler
+public class Router extends HandlerList
 {
-    /**********
-     * CLIENT *
-     **********/
-
-    public static class Client
-    {
-        public class Response
-        {
-            private final int status;
-            private final ByteArrayOutputStream body;
-
-            private Response(int status, ByteArrayOutputStream body)
-            {
-                this.status = status;
-                this.body = body;
-            }
-
-            public int getStatus()
-            {
-                return status;
-            }
-
-            public int getSize()
-            {
-                return body.size();
-            }
-
-            public byte[] getBytes()
-            {
-                return body.toByteArray();
-            }
-
-            public String getBody()
-            {
-                try
-                {
-                    return body.toString("UTF-8");
-                }
-                catch (UnsupportedEncodingException e)
-                {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
-
-        private Response request(String method, String path, @Nullable String body)
-        {
-            HttpURLConnection con = null;
-
-            try
-            {
-                URL url = new URL("http", "localhost", 8080, path);
-
-                con = (HttpURLConnection) url.openConnection();
-
-                con.setRequestMethod(method);
-
-                if (body != null)
-                {
-                    con.setDoOutput(true);
-
-                    try (OutputStream out = con.getOutputStream())
-                    {
-                        out.write(body.getBytes(Charset.forName("UTF-8")));
-                        out.flush();
-                    }
-                }
-
-                int status = con.getResponseCode();
-
-                try (InputStream in = status > 299
-                    ? con.getErrorStream()
-                    : con.getInputStream();
-
-                    ByteArrayOutputStream out = new ByteArrayOutputStream();)
-                {
-                    byte[] buffer = new byte[1024];
-                    int length;
-
-                    while ((length = in.read(buffer)) != -1)
-                    {
-                        out.write(buffer, 0, length);
-                    }
-
-                    out.flush();
-
-                    return new Response(status, out);
-                }
-            }
-            catch (IOException e)
-            {
-                throw new RuntimeException(e);
-            }
-            finally
-            {
-                if (con != null)
-                {
-                    con.disconnect();
-                }
-            }
-        }
-
-        public Response get(String target)
-        {
-            return request("GET", target, null);
-        }
-
-        public Response post(String target, String body)
-        {
-            return request("POST", target, body);
-        }
-
-        public Response put(String target, String body)
-        {
-            return request("PUT", target, body);
-        }
-
-        public Response delete(String target)
-        {
-            return request("DELETE", target, null);
-        }
-    }
-
-    /**************
-     * EXCEPTIONS *
-     **************/
-
     public static class ValidationException extends RuntimeException
     {
         private static final long serialVersionUID = 1L;
@@ -163,10 +33,6 @@ public class Router extends AbstractHandler
             super(msg);
         }
     }
-
-    /***********
-     * LAMBDAS *
-     ***********/
 
     @FunctionalInterface
     public static interface Controller
@@ -180,15 +46,54 @@ public class Router extends AbstractHandler
         abstract void handle(HttpServletRequest req, HttpServletResponse res) throws Exception;
     }
 
-    /**********
-     * ROUTER *
-     **********/
-
     private static final Logger LOG = LoggerFactory.getLogger(Router.class);
 
     private List<Route> routes = new ArrayList<>();
     private List<Route> befores = new ArrayList<>();
     private ArrayDeque<String> context = new ArrayDeque<>();
+
+    private class RouterWebSocketHandler extends WebSocketHandler
+    {
+        private final String route;
+        private final Object controller;
+
+        private class RouterWebSocketCreator implements WebSocketCreator
+        {
+            @Override
+            public Object createWebSocket(ServletUpgradeRequest req, ServletUpgradeResponse res)
+            {
+                return controller;
+            }
+        }
+
+        public RouterWebSocketHandler(String route, Object controller)
+        {
+            this.route = route;
+            this.controller = controller;
+
+            LOG.info("WS {}", route);
+        }
+
+        @Override
+        public void configure(WebSocketServletFactory factory)
+        {
+            factory.setCreator(new RouterWebSocketCreator());
+        }
+
+        @Override
+        public void handle(
+            String target,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+            throws IOException, ServletException
+        {
+            if (route.equals(target))
+            {
+                super.handle(target, baseRequest, request, response);
+            }
+        }
+    }
 
     private class Route
     {
@@ -200,11 +105,11 @@ public class Router extends AbstractHandler
         private Route(String method, String spec, RouteHandler handler)
         {
             this.method = method;
-            this.spec = spec.replaceAll("/+", "/");
+            this.spec = spec;
             this.path = new UriTemplatePathSpec(this.spec);
             this.handler = handler;
 
-            LOG.info("{} {}", this.method, this.spec);
+            LOG.info("{} {}", method, spec);
         }
 
         public boolean matches(String target)
@@ -261,7 +166,18 @@ public class Router extends AbstractHandler
 
         builder.append(route);
 
-        return builder.toString();
+        return builder.toString().replaceAll("/+", "/");
+    }
+
+    public Router use(Object controller)
+    {
+        return use("", controller);
+    }
+
+    public Router use(String route, Object controller)
+    {
+        addHandler(new RouterWebSocketHandler(getContext(route), controller));
+        return this;
     }
 
     public Router use(Controller controller)
@@ -339,11 +255,9 @@ public class Router extends AbstractHandler
         HttpServletRequest req,
         HttpServletResponse res) throws IOException, ServletException
     {
-        String method = baseRequest.getMethod();
-
         for (Route route : routes)
         {
-            if (route.matches(method, target))
+            if (route.matches(baseRequest.getMethod(), target))
             {
                 req.setCharacterEncoding("UTF-8");
                 res.setCharacterEncoding("UTF-8");
@@ -364,6 +278,6 @@ public class Router extends AbstractHandler
             }
         }
 
-        LOG.warn("Not found: {} {} {}", method, target, req.getRemoteAddr());
+        super.handle(target, baseRequest, req, res);
     }
 }

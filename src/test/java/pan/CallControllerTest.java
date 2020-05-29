@@ -2,8 +2,14 @@ package pan;
 
 import static org.junit.Assert.*;
 import javax.inject.Inject;
+import javax.inject.Named;
 import com.google.gson.Gson;
 import com.google.inject.Guice;
+import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.api.ContentProvider;
+import org.eclipse.jetty.client.api.ContentResponse;
+import org.eclipse.jetty.client.util.StringContentProvider;
+import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.server.Server;
 import org.junit.After;
 import org.junit.Before;
@@ -13,17 +19,18 @@ import io.openvidu.java.client.OpenViduHttpException;
 import io.openvidu.java.client.OpenViduJavaClientException;
 import io.openvidu.java.client.Session;
 import pan.Modules.Development;
-import pan.Router.Client;
-import pan.Router.Client.Response;
 
 public class CallControllerTest
 {
+    @Inject
+    @Named("testURI")
+    private String uri;
     @Inject
     private Gson gson;
     @Inject
     private OpenVidu openVidu;
     @Inject
-    private Client client;
+    private HttpClient client;
     @Inject
     private Server server;
     @Inject
@@ -37,32 +44,47 @@ public class CallControllerTest
         Guice.createInjector(new Development()).injectMembers(this);
         router.use("/call", callController);
         server.start();
+        client.start();
     }
 
     @After
     public void tearDown() throws Exception
     {
+        client.stop();
         server.stop();
     }
 
     @Test
-    public void shouldReturnNotFound()
+    public void shouldReturnNotFound() throws Exception
     {
-        assertEquals(404, client.get("/none").getStatus());
-        assertEquals(404, client.get("/call").getStatus());
+        ContentResponse res = client
+            .newRequest(uri)
+            .method(HttpMethod.GET)
+            .path("/none")
+            .send();
+
+        assertEquals(404, res.getStatus());
     }
 
     @Test
-    public void shouldJoinExistingSession()
+    public void shouldJoinExistingSession() throws Exception
     {
         CallPayload payload = new CallPayload();
         payload.setSessionId("existing-session");
 
-        Response res;
+        ContentProvider content = new StringContentProvider(gson.toJson(payload));
+
+        ContentResponse res;
 
         for (int i = 0; i < 10; i++)
         {
-            res = client.post("/call", gson.toJson(payload));
+            res = client
+                .newRequest(uri)
+                .method(HttpMethod.POST)
+                .content(content, "application/json")
+                .path("/call")
+                .send();
+
             assertEquals(200, res.getStatus());
         }
 
@@ -89,23 +111,37 @@ public class CallControllerTest
     }
 
     @Test
-    public void shouldNotCreateMalformedSession()
+    public void shouldNotCreateMalformedSession() throws Exception
     {
-        assertNotEquals(200, client.post("/call", "{ essionId: 1 }").getStatus());
-        assertNotEquals(200, client.post("/call", "{ error }").getStatus());
-        assertNotEquals(200, client.post("/call", "test").getStatus());
-        assertNotEquals(200, client.post("/call", "").getStatus());
+        ContentProvider content = new StringContentProvider("{ essionId: 1 ");
+
+        ContentResponse res = client
+            .newRequest(uri)
+            .method(HttpMethod.POST)
+            .content(content, "application/json")
+            .path("/call")
+            .send();
+
+        assertNotEquals(200, res.getStatus());
     }
 
     @Test
-    public void shouldRemoveDiacriticsFromSessionId()
+    public void shouldRemoveDiacriticsFromSessionId() throws Exception
     {
         CallPayload payload = new CallPayload();
+
         payload.setSessionId("AaĞğŞşİıÖöÇçĞğŞşİıÖöÇç-0123456789-%%");
 
-        Response res = client.post("/call", gson.toJson(payload));
+        ContentProvider content = new StringContentProvider(gson.toJson(payload));
+
+        ContentResponse res = client
+            .newRequest(uri)
+            .method(HttpMethod.POST)
+            .path("/call")
+            .content(content, "application/json")
+            .send();
 
         assertEquals(200, res.getStatus());
-        assertNotEquals(-1, res.getBody().indexOf("AaGgSsIiOoCcGgSsIiOoCc-0123456789-__"));
+        assertNotEquals(-1, res.getContentAsString().indexOf("AaGgSsIiOoCcGgSsIiOoCc-0123456789-__"));
     }
 }

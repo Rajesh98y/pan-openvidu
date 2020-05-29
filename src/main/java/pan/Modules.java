@@ -1,5 +1,6 @@
 package pan;
 
+import javax.inject.Named;
 import javax.inject.Singleton;
 import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.MustacheFactory;
@@ -69,6 +70,13 @@ public class Modules
 
     public static class Development extends Common
     {
+        @Provides
+        @Named("testURI")
+        public String provideTestURI()
+        {
+            return "http://localhost:8080";
+        }
+        
         public Development()
         {
             setOpenViduPassword("MY_SECRET");

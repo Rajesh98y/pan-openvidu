@@ -31,7 +31,12 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
-      <version>9.4.28.v20200408</version>
+      <version>9.4.29.v20200521</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty.websocket</groupId>
+      <artifactId>websocket-server</artifactId>
+      <version>9.4.29.v20200521</version>
     </dependency>
     <dependency>
       <groupId>com.google.code.gson</groupId>
@@ -52,6 +57,18 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
       <version>1.7.30</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-client</artifactId>
+      <version>9.4.29.v20200521</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty.websocket</groupId>
+      <artifactId>websocket-client</artifactId>
+      <version>9.4.29.v20200521</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
