@@ -62,14 +62,14 @@ public class Modules
     public static class Development extends Common
     {
         @Provides
-        @Named("testURI")
+        @Named("httpURI")
         public String provideTestURI()
         {
             return "http://localhost:8080";
         }
 
         @Provides
-        @Named("socketURI")
+        @Named("wsURI")
         public String provideSocketURI()
         {
             return "ws://localhost:8080/echo";

@@ -34,6 +34,6 @@ public class SocketController
     @OnWebSocketMessage
     public void message(Session session, String message) throws IOException
     {
-        session.getRemote().sendString(message);
+        service.message(session, message);
     }
 }

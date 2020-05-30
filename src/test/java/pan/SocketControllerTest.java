@@ -23,7 +23,7 @@ import pan.Modules.Development;
 public class SocketControllerTest
 {
     @Inject
-    @Named("socketURI")
+    @Named("wsURI")
     private String uri;
     @Inject
     private WebSocketClient client;

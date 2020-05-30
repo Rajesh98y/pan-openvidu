@@ -23,7 +23,7 @@ import pan.Modules.Development;
 public class CallControllerTest
 {
     @Inject
-    @Named("testURI")
+    @Named("httpURI")
     private String uri;
     @Inject
     private Gson gson;
