@@ -47,6 +47,7 @@ public class Application
         router
             .use("/call", () -> router
                 .use(callController)
+                .use("/echo", WebSocketController.class)
                 .use("/login", loginController));
 
         try

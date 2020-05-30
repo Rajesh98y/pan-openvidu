@@ -6,10 +6,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import com.google.inject.Injector;
 import org.eclipse.jetty.http.pathmap.UriTemplatePathSpec;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -48,30 +50,35 @@ public class Router extends HandlerList
 
     private static final Logger LOG = LoggerFactory.getLogger(Router.class);
 
+    private Injector injector;
     private List<Route> routes = new ArrayList<>();
     private List<Route> befores = new ArrayList<>();
     private ArrayDeque<String> context = new ArrayDeque<>();
 
+    @Inject
+    public void setInjector(Injector injector)
+    {
+        this.injector = injector;
+    }
+
     private class RouterWebSocketHandler extends WebSocketHandler
     {
         private final String route;
-        private final Object controller;
+        private final Class<?> controller;
 
         private class RouterWebSocketCreator implements WebSocketCreator
         {
             @Override
             public Object createWebSocket(ServletUpgradeRequest req, ServletUpgradeResponse res)
             {
-                return controller;
+                return injector.getInstance(controller);
             }
         }
 
-        public RouterWebSocketHandler(String route, Object controller)
+        public RouterWebSocketHandler(String route, Class<?> controller)
         {
             this.route = route;
             this.controller = controller;
-
-            LOG.info("WS {}", route);
         }
 
         @Override
@@ -106,10 +113,8 @@ public class Router extends HandlerList
         {
             this.method = method;
             this.spec = spec;
-            this.path = new UriTemplatePathSpec(this.spec);
+            this.path = new UriTemplatePathSpec(spec);
             this.handler = handler;
-
-            LOG.info("{} {}", method, spec);
         }
 
         public boolean matches(String target)
@@ -125,6 +130,11 @@ public class Router extends HandlerList
         public void setAttributes(HttpServletRequest req, String target)
         {
             this.path.getPathParams(target).forEach((k, v) -> req.setAttribute(k, v));
+        }
+
+        public boolean isHandling()
+        {
+            return handler != null;
         }
 
         public void handle(HttpServletRequest req, HttpServletResponse res)
@@ -169,14 +179,18 @@ public class Router extends HandlerList
         return builder.toString().replaceAll("/+", "/");
     }
 
-    public Router use(Object controller)
+    public Router use(Class<?> controller)
     {
         return use("", controller);
     }
 
-    public Router use(String route, Object controller)
+    public Router use(String route, Class<?> controller)
     {
-        addHandler(new RouterWebSocketHandler(getContext(route), controller));
+        route = getContext(route);
+
+        routes.add(new Route("GET", route, null));
+        addHandler(new RouterWebSocketHandler(route, controller));
+
         return this;
     }
 
@@ -269,12 +283,20 @@ public class Router extends HandlerList
                     }
                 }
 
-                route.handle(req, res);
-                baseRequest.setHandled(true);
+                if (route.isHandling())
+                {
+                    route.handle(req, res);
+                    baseRequest.setHandled(true);
+                }
+                else
+                {
+                    super.handle(target, baseRequest, req, res);
+                }
+
                 return;
             }
         }
 
-        super.handle(target, baseRequest, req, res);
+        LOG.warn("Not found: {} {}", req.getMethod(), req.getRequestURI());
     }
 }
