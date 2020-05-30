@@ -68,6 +68,13 @@ public class Modules
             return "http://localhost:8080";
         }
 
+        @Provides
+        @Named("socketURI")
+        public String provideSocketURI()
+        {
+            return "ws://localhost:8080/echo";
+        }
+
         public Development()
         {
             setOpenViduPassword("MY_SECRET");
