@@ -15,7 +15,7 @@ public class Application
 
     private Server server;
     private Router router;
-    private LoginController loginController;
+    private Filters filters;
     private CallController callController;
 
     @Inject
@@ -31,9 +31,9 @@ public class Application
     }
 
     @Inject
-    public void setLoginController(LoginController loginController)
+    public void setFilters(Filters filters)
     {
-        this.loginController = loginController;
+        this.filters = filters;
     }
 
     @Inject
@@ -45,10 +45,10 @@ public class Application
     public void run()
     {
         router
+            .use("/echo", SocketController.class)
             .use("/call", () -> router
-                .use(callController)
-                .use("/echo", WebSocketController.class)
-                .use("/login", loginController));
+                .before(filters::json)
+                .use(callController));
 
         try
         {

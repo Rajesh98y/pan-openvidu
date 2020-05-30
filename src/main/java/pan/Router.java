@@ -26,16 +26,6 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class Router extends HandlerList
 {
-    public static class ValidationException extends RuntimeException
-    {
-        private static final long serialVersionUID = 1L;
-
-        public ValidationException(String msg)
-        {
-            super(msg);
-        }
-    }
-
     @FunctionalInterface
     public static interface Controller
     {
@@ -297,6 +287,6 @@ public class Router extends HandlerList
             }
         }
 
-        LOG.warn("Not found: {} {}", req.getMethod(), req.getRequestURI());
+        LOG.warn("{} {} not found", req.getMethod(), req.getRequestURI());
     }
 }

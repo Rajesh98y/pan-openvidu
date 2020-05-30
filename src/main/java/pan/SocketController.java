@@ -10,7 +10,7 @@ import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
 import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 
 @WebSocket
-public class WebSocketController
+public class SocketController
 {
     private static final Queue<Session> sessions = new ConcurrentLinkedQueue<>();
 
