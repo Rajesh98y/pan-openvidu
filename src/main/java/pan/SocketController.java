@@ -1,8 +1,7 @@
 package pan;
 
 import java.io.IOException;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import javax.inject.Inject;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
@@ -12,18 +11,24 @@ import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 @WebSocket
 public class SocketController
 {
-    private static final Queue<Session> sessions = new ConcurrentLinkedQueue<>();
+    private SocketService service;
+
+    @Inject
+    public void setService(SocketService service)
+    {
+        this.service = service;
+    }
 
     @OnWebSocketConnect
     public void connected(Session session)
     {
-        sessions.add(session);
+        service.add(session);
     }
 
     @OnWebSocketClose
     public void closed(Session session, int statusCode, String reason)
     {
-        sessions.remove(session);
+        service.remove(session);
     }
 
     @OnWebSocketMessage
