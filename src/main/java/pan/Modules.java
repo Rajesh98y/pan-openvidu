@@ -7,6 +7,7 @@ import com.google.gson.GsonBuilder;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import org.eclipse.jetty.server.Server;
+import io.github.ecmel.router.Router;
 import io.openvidu.java.client.OpenVidu;
 
 public class Modules

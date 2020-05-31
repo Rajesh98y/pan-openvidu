@@ -7,12 +7,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import io.github.ecmel.router.Router;
+import io.github.ecmel.router.Router.Controller;
 import io.openvidu.java.client.OpenVidu;
 import io.openvidu.java.client.OpenViduRole;
 import io.openvidu.java.client.Session;
 import io.openvidu.java.client.SessionProperties;
 import io.openvidu.java.client.TokenOptions;
-import pan.Router.Controller;
 
 @Singleton
 public class CallController implements Controller
