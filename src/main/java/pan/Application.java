@@ -6,7 +6,6 @@ import com.google.inject.Guice;
 import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import io.github.ecmel.router.Router;
 import pan.Modules.Production;
 
 @Singleton
@@ -46,7 +45,6 @@ public class Application
     public void run()
     {
         router
-            .use("/echo", SocketController.class)
             .use("/call", () -> router
                 .filter(filters::json)
                 .use(callController));

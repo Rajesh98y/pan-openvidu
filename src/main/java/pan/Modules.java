@@ -7,7 +7,6 @@ import com.google.gson.GsonBuilder;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import org.eclipse.jetty.server.Server;
-import io.github.ecmel.router.Router;
 import io.openvidu.java.client.OpenVidu;
 
 public class Modules
@@ -67,13 +66,6 @@ public class Modules
         public String provideTestURI()
         {
             return "http://localhost:8080";
-        }
-
-        @Provides
-        @Named("wsURI")
-        public String provideSocketURI()
-        {
-            return "ws://localhost:8080/echo";
         }
 
         public Development()
