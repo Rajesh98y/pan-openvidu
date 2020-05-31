@@ -3,9 +3,7 @@ package pan;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.servlet.ServletException;
@@ -14,6 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 import com.google.inject.Injector;
 import org.eclipse.jetty.http.pathmap.UriTemplatePathSpec;
 import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.websocket.server.WebSocketHandler;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
@@ -37,13 +36,82 @@ public class Router extends HandlerList
     }
 
     private Injector injector;
-    private List<Route> routes = new ArrayList<>();
     private ArrayDeque<String> context = new ArrayDeque<>();
 
     @Inject
     public void setInjector(Injector injector)
     {
         this.injector = injector;
+    }
+
+    private class FilterHandler extends AbstractHandler
+    {
+        private final String route;
+        private final RouteHandler handler;
+
+        public FilterHandler(String route, RouteHandler handler)
+        {
+            this.route = route;
+            this.handler = handler;
+        }
+
+        @Override
+        public void handle(
+            String target,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+            throws IOException, ServletException
+        {
+            if (target.startsWith(route))
+            {
+                try
+                {
+                    handler.handle(request, response);
+                }
+                catch (Exception e)
+                {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+    }
+
+    private class UriTemplatePathSpecHandler extends AbstractHandler
+    {
+        private final String method;
+        private final UriTemplatePathSpec route;
+        private final RouteHandler handler;
+
+        public UriTemplatePathSpecHandler(String method, String route, RouteHandler handler)
+        {
+            this.method = method;
+            this.route = new UriTemplatePathSpec(route);
+            this.handler = handler;
+        }
+
+        @Override
+        public void handle(
+            String target,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+            throws IOException, ServletException
+        {
+            if (method.equals(baseRequest.getMethod()) && route.matches(target))
+            {
+                try
+                {
+                    route.getPathParams(target).forEach((k, v) -> request.setAttribute(k, v));
+                    handler.handle(request, response);
+                    baseRequest.setHandled(true);
+                }
+                catch (Exception e)
+                {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
     }
 
     private class RouterWebSocketHandler extends WebSocketHandler
@@ -76,61 +144,13 @@ public class Router extends HandlerList
         public void handle(
             String target,
             Request baseRequest,
-            HttpServletRequest req,
-            HttpServletResponse res)
+            HttpServletRequest request,
+            HttpServletResponse response)
             throws IOException, ServletException
         {
             if (route.equals(target))
             {
-                super.handle(target, baseRequest, req, res);
-            }
-        }
-    }
-
-    private class Route
-    {
-        private final String method;
-        private final String spec;
-        private final UriTemplatePathSpec path;
-        private final RouteHandler handler;
-
-        public Route(String method, String spec, RouteHandler handler)
-        {
-            this.method = method;
-            this.spec = spec;
-            this.path = new UriTemplatePathSpec(spec);
-            this.handler = handler;
-        }
-
-        public boolean filters(String target)
-        {
-            return this.method.equals("FILTER") && target.startsWith(this.spec);
-        }
-
-        public boolean matches(String method, String target)
-        {
-            return this.method.equals(method) && this.path.matches(target);
-        }
-
-        public void setAttributes(HttpServletRequest req, String target)
-        {
-            this.path.getPathParams(target).forEach((k, v) -> req.setAttribute(k, v));
-        }
-
-        public boolean isHandling()
-        {
-            return handler != null;
-        }
-
-        public void handle(HttpServletRequest req, HttpServletResponse res)
-        {
-            try
-            {
-                handler.handle(req, res);
-            }
-            catch (Exception e)
-            {
-                throw new RuntimeException(e);
+                super.handle(target, baseRequest, request, response);
             }
         }
     }
@@ -171,11 +191,7 @@ public class Router extends HandlerList
 
     public Router use(String route, Class<?> controller)
     {
-        route = getContext(route);
-
-        routes.add(new Route("GET", route, null));
-        addHandler(new RouterWebSocketHandler(route, controller));
-
+        addHandler(new RouterWebSocketHandler(getContext(route), controller));
         return this;
     }
 
@@ -199,7 +215,7 @@ public class Router extends HandlerList
 
     public Router get(String route, RouteHandler handler)
     {
-        routes.add(new Route("GET", getContext(route), handler));
+        addHandler(new UriTemplatePathSpecHandler("GET", getContext(route), handler));
         return this;
     }
 
@@ -210,7 +226,7 @@ public class Router extends HandlerList
 
     public Router put(String route, RouteHandler handler)
     {
-        routes.add(new Route("PUT", getContext(route), handler));
+        addHandler(new UriTemplatePathSpecHandler("PUT", getContext(route), handler));
         return this;
     }
 
@@ -221,7 +237,7 @@ public class Router extends HandlerList
 
     public Router post(String route, RouteHandler handler)
     {
-        routes.add(new Route("POST", getContext(route), handler));
+        addHandler(new UriTemplatePathSpecHandler("POST", getContext(route), handler));
         return this;
     }
 
@@ -232,7 +248,7 @@ public class Router extends HandlerList
 
     public Router delete(String route, RouteHandler handler)
     {
-        routes.add(new Route("DELETE", getContext(route), handler));
+        addHandler(new UriTemplatePathSpecHandler("DELETE", getContext(route), handler));
         return this;
     }
 
@@ -243,37 +259,7 @@ public class Router extends HandlerList
 
     public Router filter(String route, RouteHandler handler)
     {
-        routes.add(new Route("FILTER", getContext(route), handler));
+        addHandler(new FilterHandler(getContext(route), handler));
         return this;
-    }
-
-    @Override
-    public void handle(
-        String target,
-        Request baseRequest,
-        HttpServletRequest req,
-        HttpServletResponse res) throws IOException, ServletException
-    {
-        for (Route route : routes)
-        {
-            if (route.filters(target))
-            {
-                route.handle(req, res);
-            }
-            else if (route.matches(baseRequest.getMethod(), target))
-            {
-                route.setAttributes(req, target);
-
-                if (route.isHandling())
-                {
-                    route.handle(req, res);
-                    baseRequest.setHandled(true);
-                }
-                else
-                {
-                    super.handle(target, baseRequest, req, res);
-                }
-            }
-        }
     }
 }
