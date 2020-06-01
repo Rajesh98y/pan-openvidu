@@ -15,8 +15,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import io.openvidu.java.client.OpenVidu;
-import io.openvidu.java.client.OpenViduHttpException;
-import io.openvidu.java.client.OpenViduJavaClientException;
 import io.openvidu.java.client.Session;
 import pan.Modules.Development;
 
@@ -88,14 +86,7 @@ public class CallControllerTest
             assertEquals(200, res.getStatus());
         }
 
-        try
-        {
-            openVidu.fetch();
-        }
-        catch (OpenViduJavaClientException | OpenViduHttpException e)
-        {
-            throw new RuntimeException(e);
-        }
+        openVidu.fetch();
 
         int count = 0;
 
