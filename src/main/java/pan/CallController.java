@@ -1,12 +1,10 @@
 package pan;
 
-import java.io.IOException;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
 import io.openvidu.java.client.OpenVidu;
 import io.openvidu.java.client.OpenViduRole;
 import io.openvidu.java.client.Session;
@@ -56,7 +54,7 @@ public class CallController implements Controller
         res.getWriter().print(token);
     }
 
-    private String getSessionId(HttpServletRequest req) throws JsonSyntaxException, IOException
+    private String getSessionId(HttpServletRequest req) throws Exception
     {
         CallPayload payload = gson.fromJson(router.getRequestBody(req), CallPayload.class);
 

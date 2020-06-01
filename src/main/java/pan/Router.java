@@ -12,12 +12,12 @@ import com.google.inject.Injector;
 import org.eclipse.jetty.http.pathmap.UriTemplatePathSpec;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
-import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.websocket.server.WebSocketHandler;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
 
 @Singleton
-public class Router extends HandlerList
+public class Router extends HandlerCollection
 {
     @FunctionalInterface
     public static interface Route
@@ -43,12 +43,12 @@ public class Router extends HandlerList
     private class FilterHandler extends AbstractHandler
     {
         private final String path;
-        private final Route handler;
+        private final Route route;
 
-        public FilterHandler(String path, Route handler)
+        public FilterHandler(String path, Route route)
         {
             this.path = path;
-            this.handler = handler;
+            this.route = route;
         }
 
         @Override
@@ -56,18 +56,17 @@ public class Router extends HandlerList
             String target,
             Request baseRequest,
             HttpServletRequest request,
-            HttpServletResponse response)
-            throws IOException, ServletException
+            HttpServletResponse response) throws IOException, ServletException
         {
             if (target.startsWith(path))
             {
                 try
                 {
-                    handler.handle(request, response);
+                    route.handle(request, response);
                 }
                 catch (Exception e)
                 {
-                    throw new RuntimeException(e);
+                    throw new ServletException(e);
                 }
             }
         }
@@ -91,8 +90,7 @@ public class Router extends HandlerList
             String target,
             Request baseRequest,
             HttpServletRequest request,
-            HttpServletResponse response)
-            throws IOException, ServletException
+            HttpServletResponse response) throws IOException, ServletException
         {
             if (method.equals(baseRequest.getMethod()) && path.matches(target))
             {
@@ -104,7 +102,7 @@ public class Router extends HandlerList
                 }
                 catch (Exception e)
                 {
-                    throw new RuntimeException(e);
+                    throw new ServletException(e);
                 }
             }
         }
@@ -132,8 +130,7 @@ public class Router extends HandlerList
             String target,
             Request baseRequest,
             HttpServletRequest request,
-            HttpServletResponse response)
-            throws IOException, ServletException
+            HttpServletResponse response) throws IOException, ServletException
         {
             if (path.equals(target))
             {
@@ -146,8 +143,8 @@ public class Router extends HandlerList
     {
         StringBuilder builder = new StringBuilder();
         BufferedReader reader = req.getReader();
-        String line;
 
+        String line;
         while ((line = reader.readLine()) != null)
         {
             builder.append(line);
@@ -159,11 +156,7 @@ public class Router extends HandlerList
     private String getContext(String path)
     {
         StringBuilder builder = new StringBuilder();
-
-        context
-            .descendingIterator()
-            .forEachRemaining((e) -> builder.append(e));
-
+        context.descendingIterator().forEachRemaining((e) -> builder.append(e));
         builder.append(path);
 
         return builder.toString().replaceAll("/+", "/");
