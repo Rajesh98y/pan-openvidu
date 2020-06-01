@@ -56,7 +56,7 @@ public class CallController implements Controller
 
     private String getSessionId(HttpServletRequest req) throws Exception
     {
-        CallPayload payload = gson.fromJson(router.getRequestBody(req), CallPayload.class);
+        CallPayload payload = gson.fromJson(router.getBody(req), CallPayload.class);
 
         String sessionId = payload.getSessionId();
 

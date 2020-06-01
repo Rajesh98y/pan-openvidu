@@ -1,6 +1,5 @@
 package pan;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import javax.inject.Inject;
@@ -139,17 +138,10 @@ public class Router extends HandlerCollection
         }
     }
 
-    public String getRequestBody(HttpServletRequest req) throws IOException
+    public String getBody(HttpServletRequest req) throws IOException
     {
         StringBuilder builder = new StringBuilder();
-        BufferedReader reader = req.getReader();
-
-        String line;
-        while ((line = reader.readLine()) != null)
-        {
-            builder.append(line);
-        }
-
+        req.getReader().lines().forEach((e) -> builder.append(e));
         return builder.toString();
     }
 
