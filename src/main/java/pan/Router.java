@@ -39,15 +39,42 @@ public class Router extends HandlerCollection
         this.injector = injector;
     }
 
-    private class FilterHandler extends AbstractHandler
+    private abstract class RouteHandler extends AbstractHandler
     {
-        private final String path;
         private final Route route;
 
-        public FilterHandler(String path, Route route)
+        protected RouteHandler(Route route)
         {
-            this.path = path;
             this.route = route;
+        }
+
+        protected void handle(
+            HttpServletRequest request,
+            HttpServletResponse response) throws IOException, ServletException
+        {
+            try
+            {
+                route.handle(request, response);
+            }
+            catch (IOException | ServletException e)
+            {
+                throw e;
+            }
+            catch (Exception e)
+            {
+                throw new ServletException(e);
+            }
+        }
+    }
+
+    private class RouteFilterHandler extends RouteHandler
+    {
+        private final String path;
+
+        public RouteFilterHandler(String path, Route route)
+        {
+            super(route);
+            this.path = path;
         }
 
         @Override
@@ -59,29 +86,21 @@ public class Router extends HandlerCollection
         {
             if (target.startsWith(path))
             {
-                try
-                {
-                    route.handle(request, response);
-                }
-                catch (Exception e)
-                {
-                    throw new ServletException(e);
-                }
+                handle(request, response);
             }
         }
     }
 
-    private class RouteHandler extends AbstractHandler
+    private class RouteUriTemplateHandler extends RouteHandler
     {
         private final String method;
         private final UriTemplatePathSpec path;
-        private final Route route;
 
-        public RouteHandler(String method, String path, Route route)
+        public RouteUriTemplateHandler(String method, String path, Route route)
         {
+            super(route);
             this.method = method;
             this.path = new UriTemplatePathSpec(path);
-            this.route = route;
         }
 
         @Override
@@ -93,16 +112,9 @@ public class Router extends HandlerCollection
         {
             if (method.equals(baseRequest.getMethod()) && path.matches(target))
             {
-                try
-                {
-                    path.getPathParams(target).forEach((k, v) -> request.setAttribute(k, v));
-                    route.handle(request, response);
-                    baseRequest.setHandled(true);
-                }
-                catch (Exception e)
-                {
-                    throw new ServletException(e);
-                }
+                path.getPathParams(target).forEach((k, v) -> request.setAttribute(k, v));
+                handle(request, response);
+                baseRequest.setHandled(true);
             }
         }
     }
@@ -178,14 +190,14 @@ public class Router extends HandlerCollection
         return this;
     }
 
-    public Router filter(Route route)
+    public Router all(Route route)
     {
-        return filter("", route);
+        return all("", route);
     }
 
-    public Router filter(String path, Route route)
+    public Router all(String path, Route route)
     {
-        addHandler(new FilterHandler(getContext(path), route));
+        addHandler(new RouteFilterHandler(getContext(path), route));
         return this;
     }
 
@@ -196,7 +208,7 @@ public class Router extends HandlerCollection
 
     public Router get(String path, Route route)
     {
-        addHandler(new RouteHandler("GET", getContext(path), route));
+        addHandler(new RouteUriTemplateHandler("GET", getContext(path), route));
         return this;
     }
 
@@ -207,7 +219,7 @@ public class Router extends HandlerCollection
 
     public Router put(String path, Route route)
     {
-        addHandler(new RouteHandler("PUT", getContext(path), route));
+        addHandler(new RouteUriTemplateHandler("PUT", getContext(path), route));
         return this;
     }
 
@@ -218,7 +230,7 @@ public class Router extends HandlerCollection
 
     public Router post(String path, Route route)
     {
-        addHandler(new RouteHandler("POST", getContext(path), route));
+        addHandler(new RouteUriTemplateHandler("POST", getContext(path), route));
         return this;
     }
 
@@ -229,7 +241,7 @@ public class Router extends HandlerCollection
 
     public Router delete(String path, Route route)
     {
-        addHandler(new RouteHandler("DELETE", getContext(path), route));
+        addHandler(new RouteUriTemplateHandler("DELETE", getContext(path), route));
         return this;
     }
 }

@@ -46,7 +46,7 @@ public class Application
     {
         router
             .use("/call", () -> router
-                .filter(filters::json)
+                .all(filters::json)
                 .use(callController));
 
         try
