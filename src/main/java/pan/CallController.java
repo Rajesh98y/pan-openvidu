@@ -53,6 +53,8 @@ public class CallController implements RouteGroup
         String token = gson.toJson(session.generateToken(options));
 
         res.getWriter().print(token);
+
+        req.setHandled(true);
     }
 
     private String getSessionId(HttpRequest req) throws Exception
