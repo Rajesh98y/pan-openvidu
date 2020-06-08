@@ -2,6 +2,7 @@ package pan;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import com.github.ecmel.router.Router;
 import com.google.inject.Guice;
 import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;

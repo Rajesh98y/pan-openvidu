@@ -34,15 +34,9 @@
       <version>2.8.6</version>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-server</artifactId>
-      <version>9.4.29.v20200521</version>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty.websocket</groupId>
-      <artifactId>websocket-server</artifactId>
-      <version>9.4.29.v20200521</version>
-      <scope>provided</scope>
+      <groupId>com.github.ecmel</groupId>
+      <artifactId>router</artifactId>
+      <version>0.0.1</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>

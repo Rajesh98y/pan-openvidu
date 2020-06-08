@@ -2,6 +2,7 @@ package pan;
 
 import javax.inject.Named;
 import javax.inject.Singleton;
+import com.github.ecmel.router.Router;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.inject.AbstractModule;
@@ -32,6 +33,13 @@ public class Modules
         public Gson provideGson(GsonBuilder gsonBuilder)
         {
             return gsonBuilder.create();
+        }
+
+        @Provides
+        @Singleton
+        public Router provideRouter()
+        {
+            return new Router();
         }
 
         @Provides

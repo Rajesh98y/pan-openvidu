@@ -3,6 +3,7 @@ package pan;
 import static org.junit.Assert.*;
 import javax.inject.Inject;
 import javax.inject.Named;
+import com.github.ecmel.router.Router;
 import com.google.gson.Gson;
 import com.google.inject.Guice;
 import org.eclipse.jetty.client.HttpClient;
