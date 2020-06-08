@@ -2,8 +2,8 @@ package pan;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import com.github.ecmel.router.HttpRequest;
+import com.github.ecmel.router.HttpResponse;
 import com.github.ecmel.router.RouteGroup;
 import com.github.ecmel.router.Router;
 import com.google.gson.Gson;
@@ -38,7 +38,7 @@ public class CallController implements RouteGroup
         this.openVidu = openVidu;
     }
 
-    public void generateToken(HttpServletRequest req, HttpServletResponse res) throws Exception
+    public void generateToken(HttpRequest req, HttpResponse res) throws Exception
     {
         SessionProperties properties = new SessionProperties.Builder()
             .customSessionId(getSessionId(req))
@@ -55,9 +55,9 @@ public class CallController implements RouteGroup
         res.getWriter().print(token);
     }
 
-    private String getSessionId(HttpServletRequest req) throws Exception
+    private String getSessionId(HttpRequest req) throws Exception
     {
-        CallPayload payload = gson.fromJson(router.getBody(req), CallPayload.class);
+        CallPayload payload = gson.fromJson(req.getContentAsString(), CallPayload.class);
 
         String sessionId = payload.getSessionId();
 
