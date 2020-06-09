@@ -39,9 +39,11 @@ public class CallController implements RouteGroup
     }
 
     public void generateToken(HttpRequest req, HttpResponse res) throws Exception
-    {
+    {        
+        CallPayload payload = gson.fromJson(req.getContentAsString(), CallPayload.class);
+
         SessionProperties properties = new SessionProperties.Builder()
-            .customSessionId(getSessionId(req))
+            .customSessionId(getSessionId(payload))
             .build();
 
         Session session = openVidu.createSession(properties);
@@ -53,14 +55,10 @@ public class CallController implements RouteGroup
         String token = gson.toJson(session.generateToken(options));
 
         res.getWriter().print(token);
-
-        req.setHandled(true);
     }
 
-    private String getSessionId(HttpRequest req) throws Exception
+    private String getSessionId(CallPayload payload) throws Exception
     {
-        CallPayload payload = gson.fromJson(req.getContentAsString(), CallPayload.class);
-
         String sessionId = payload.getSessionId();
 
         if (sessionId == null)
