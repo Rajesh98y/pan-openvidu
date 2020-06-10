@@ -39,7 +39,7 @@ public class CallController implements RouteGroup
     }
 
     public void generateToken(HttpRequest req, HttpResponse res) throws Exception
-    {        
+    {
         CallPayload payload = gson.fromJson(req.getContentAsString(), CallPayload.class);
 
         SessionProperties properties = new SessionProperties.Builder()
